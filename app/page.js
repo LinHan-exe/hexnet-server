@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [data, setData] = useState([]);
-  const [lastUpdate, setLastUpdate] = useState("");
+  // FIX 1: Set a default state so it shows immediately upon loading
+  const [lastUpdate, setLastUpdate] = useState("Connecting...");
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'idle', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: []
   });
@@ -15,17 +16,22 @@ export default function Home() {
         const jsonData = await resData.json();
         if (jsonData && jsonData.length > 0) {
           setData(jsonData);
-          setLastUpdate(new Date().toLocaleTimeString());
         }
         
         const resCmd = await fetch('/api/command');
         const jsonCmd = await resCmd.json();
         if (jsonCmd) setCmd(jsonCmd);
-      } catch (err) { console.error(err); }
+
+        // FIX 2: Move the timestamp update OUTSIDE the data check. 
+        // Now it updates every 10 seconds to prove the server is alive, even if Python is idle.
+        setLastUpdate(new Date().toLocaleTimeString());
+      } catch (err) { 
+        console.error(err);
+        setLastUpdate("Offline / Error");
+      }
     };
     fetchAll();
     
-    // FIX: Updated to fetch every 10 seconds (10000ms)
     const interval = setInterval(fetchAll, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -47,9 +53,10 @@ export default function Home() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2b2b36', paddingBottom: '20px', marginBottom: '20px' }}>
           <div>
             <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#ffffff' }}>Hexnet Remote Command</h1>
-            {/* FIX: Now securely reads Python's physical heartbeat instead of the ephemeral requested status */}
             <p style={{ margin: 0, color: cmd.engine_status === 'running' ? '#26a69a' : '#ffb74d', fontWeight: 'bold' }}>
-              ● Engine Status: {(cmd.engine_status || 'IDLE').toUpperCase()} {lastUpdate && <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>}
+              ● Engine Status: {(cmd.engine_status || 'IDLE').toUpperCase()} 
+              {/* FIX 3: Removed the conditional && so the Sync text is permanently glued to the UI */}
+              <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
           </div>
           <a href="/api/upload?download=true" download="hexnet_strategies.csv" style={{ backgroundColor: '#2962ff', color: 'white', padding: '10px 20px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>↓ Download CSV</a>
