@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'; // <--- ADD THIS LINE
 import { NextResponse } from 'next/server';
 
 // Global state to hold your remote commands
