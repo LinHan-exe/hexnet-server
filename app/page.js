@@ -117,8 +117,12 @@ export default function Home() {
               START
             </button>
             
-            <button onClick={() => sendCommand({ status: 'stop_requested' })} disabled={cmd.engine_status === 'idle'} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'idle') ? 0.5 : 1 }}>
-              STOP
+            <button 
+              onClick={() => sendCommand({ status: 'stop_requested' })} 
+              disabled={cmd.engine_status === 'idle' || cmd.status === 'stop_requested'} 
+              style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'idle' || cmd.status === 'stop_requested') ? 0.5 : 1 }}
+            >
+              {cmd.status === 'stop_requested' ? 'STOPPING...' : 'STOP'}
             </button>
           </div>
         </div>
