@@ -1,66 +1,48 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    // Ping our API every 5 seconds to see if Python sent new data
+    const fetchResults = async () => {
+      const res = await fetch('/api/upload');
+      const json = await res.json();
+      if (json && json.length > 0) setData(json);
+    };
+    fetchResults();
+    const interval = setInterval(fetchResults, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.js file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div style={{ backgroundColor: '#131722', color: 'white', minHeight: '100vh', padding: '40px', fontFamily: 'sans-serif' }}>
+      <h1>Hexnet Remote Monitoring</h1>
+      <p style={{ color: '#26a69a' }}>Live Strategy Results</p>
+      
+      {data.length === 0 ? <p>Waiting for Python Engine to upload...</p> : (
+        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginTop: '20px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#2b2b2b', borderBottom: '1px solid #444' }}>
+              <th style={{ padding: '10px' }}>Sharpe</th>
+              <th style={{ padding: '10px' }}>Win %</th>
+              <th style={{ padding: '10px' }}>Trades</th>
+              <th style={{ padding: '10px' }}>Net PnL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.slice(0, 20).map((row, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid #333' }}>
+                <td style={{ padding: '10px', color: '#26a69a', fontWeight: 'bold' }}>{row.Sharpe?.toFixed(2)}</td>
+                <td style={{ padding: '10px' }}>{row.WinRate?.toFixed(1)}%</td>
+                <td style={{ padding: '10px' }}>{row.Trades}</td>
+                <td style={{ padding: '10px' }}>{row.PnL?.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
