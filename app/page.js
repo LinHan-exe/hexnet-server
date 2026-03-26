@@ -59,7 +59,20 @@ export default function Home() {
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
           </div>
-          <a href="/api/upload?download=true" download="hexnet_strategies.csv" style={{ backgroundColor: '#2962ff', color: 'white', padding: '10px 20px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>↓ Download CSV</a>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            {/* NEW: Force Sync Button */}
+            <button 
+              onClick={() => sendCommand({ status: 'sync_requested' })}
+              disabled={cmd.status === 'sync_requested'}
+              style={{ backgroundColor: '#3b2a22', color: '#ffb74d', border: '1px solid #ffb74d', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', opacity: cmd.status === 'sync_requested' ? 0.5 : 1 }}
+            >
+              {cmd.status === 'sync_requested' ? 'Syncing...' : '↻ Force Desktop Sync'}
+            </button>
+            
+            <a href="/api/upload?download=true" download="hexnet_strategies.csv" style={{ backgroundColor: '#2962ff', color: 'white', padding: '10px 20px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>
+              ↓ Download CSV
+            </a>
+          </div>       
         </div>
 
         <div style={{ backgroundColor: '#1e222d', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '30px', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' }}>
