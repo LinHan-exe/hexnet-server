@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'; // <--- ADD THIS LINE (Kills the Vercel cache)
 import { NextResponse } from 'next/server';
 import Papa from 'papaparse';
 
