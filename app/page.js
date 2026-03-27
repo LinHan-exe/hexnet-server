@@ -3,10 +3,9 @@ import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [data, setData] = useState([]);
-  // FIX 1: Set a default state so it shows immediately upon loading
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
   const [cmd, setCmd] = useState({
-    status: 'idle', engine_status: 'idle', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: []
+    status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: []
   });
 
   useEffect(() => {
@@ -22,8 +21,6 @@ export default function Home() {
         const jsonCmd = await resCmd.json();
         if (jsonCmd) setCmd(jsonCmd);
 
-        // FIX 2: Move the timestamp update OUTSIDE the data check. 
-        // Now it updates every 10 seconds to prove the server is alive, even if Python is idle.
         setLastUpdate(new Date().toLocaleTimeString());
       } catch (err) { 
         console.error(err);
@@ -32,6 +29,7 @@ export default function Home() {
     };
     fetchAll();
     
+    // Strict 10-second polling to match the Python heartbeat
     const interval = setInterval(fetchAll, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -50,21 +48,26 @@ export default function Home() {
     <div style={{ backgroundColor: '#0d1117', color: '#d1d4dc', minHeight: '100vh', padding: '40px', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ maxWidth: '1500px', margin: '0 auto' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2b2b36', paddingBottom: '20px', marginBottom: '20px' }}>
+        {/* Header Section */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2b2b36', paddingBottom: '20px', marginBottom: '20px', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#ffffff' }}>Hexnet Remote Command</h1>
-            <p style={{ margin: 0, color: cmd.engine_status === 'running' ? '#26a69a' : '#ffb74d', fontWeight: 'bold' }}>
-              ● Engine Status: {(cmd.engine_status || 'IDLE').toUpperCase()} 
-              {/* FIX 3: Removed the conditional && so the Sync text is permanently glued to the UI */}
+            <p style={{ 
+              margin: 0, 
+              color: cmd.engine_status === 'running' ? '#26a69a' : 
+                     cmd.engine_status === 'offline' ? '#ef5350' : '#ffb74d', 
+              fontWeight: 'bold' 
+            }}>
+              ● Engine Status: {(cmd.engine_status || 'OFFLINE').toUpperCase()} 
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
           </div>
+          
           <div style={{ display: 'flex', gap: '15px' }}>
-            {/* NEW: Force Sync Button */}
             <button 
               onClick={() => sendCommand({ status: 'sync_requested' })}
-              disabled={cmd.status === 'sync_requested'}
-              style={{ backgroundColor: '#3b2a22', color: '#ffb74d', border: '1px solid #ffb74d', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', opacity: cmd.status === 'sync_requested' ? 0.5 : 1 }}
+              disabled={cmd.status === 'sync_requested' || cmd.engine_status === 'offline'}
+              style={{ backgroundColor: '#3b2a22', color: '#ffb74d', border: '1px solid #ffb74d', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.status === 'sync_requested' || cmd.engine_status === 'offline') ? 0.5 : 1 }}
             >
               {cmd.status === 'sync_requested' ? 'Syncing...' : '↻ Force Desktop Sync'}
             </button>
@@ -72,9 +75,10 @@ export default function Home() {
             <a href="/api/upload?download=true" download="hexnet_strategies.csv" style={{ backgroundColor: '#2962ff', color: 'white', padding: '10px 20px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>
               ↓ Download CSV
             </a>
-          </div>       
+          </div>
         </div>
 
+        {/* Command Panel */}
         <div style={{ backgroundColor: '#1e222d', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '30px', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', flex: 1 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 220px' }}>
@@ -113,20 +117,25 @@ export default function Home() {
               <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Auto-Loop
             </label>
 
-            <button onClick={() => sendCommand({ status: 'start_requested' })} disabled={cmd.engine_status === 'running' || cmd.status === 'start_requested'} style={{ backgroundColor: '#26a69a', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'running' || cmd.status === 'start_requested') ? 0.5 : 1 }}>
-              START
+            <button 
+              onClick={() => sendCommand({ status: 'start_requested' })} 
+              disabled={cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline'} 
+              style={{ backgroundColor: '#26a69a', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline') ? 0.5 : 1 }}
+            >
+              {cmd.status === 'start_requested' ? 'STARTING...' : 'START'}
             </button>
             
             <button 
               onClick={() => sendCommand({ status: 'stop_requested' })} 
-              disabled={cmd.engine_status === 'idle' || cmd.status === 'stop_requested'} 
-              style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'idle' || cmd.status === 'stop_requested') ? 0.5 : 1 }}
+              disabled={cmd.engine_status === 'idle' || cmd.engine_status === 'offline' || cmd.status === 'stop_requested'} 
+              style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'idle' || cmd.engine_status === 'offline' || cmd.status === 'stop_requested') ? 0.5 : 1 }}
             >
               {cmd.status === 'stop_requested' ? 'STOPPING...' : 'STOP'}
             </button>
           </div>
         </div>
 
+        {/* Data Table */}
         {data.length === 0 ? ( 
           <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
             <h3 style={{ color: '#787b86' }}>Waiting for Python Engine...</h3> 
