@@ -6,7 +6,7 @@ export default function Home() {
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
-    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2,
+    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, use_genetic: false,
     progress: 0, total_sims: 1000
   });
 
@@ -15,9 +15,7 @@ export default function Home() {
       try {
         const resData = await fetch('/api/upload');
         const jsonData = await resData.json();
-        if (jsonData && jsonData.length > 0) {
-          setData(jsonData);
-        }
+        if (jsonData && jsonData.length > 0) setData(jsonData);
         
         const resCmd = await fetch('/api/command');
         const jsonCmd = await resCmd.json();
@@ -30,8 +28,6 @@ export default function Home() {
       }
     };
     fetchAll();
-    
-    // Strict 10-second polling to match the Python heartbeat
     const interval = setInterval(fetchAll, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -58,7 +54,6 @@ export default function Home() {
               ● Engine Status: {(cmd.engine_status || 'OFFLINE').toUpperCase()} 
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
-            {/* The Live Progress Bar */}
             {cmd.engine_status === 'running' && (
               <div style={{ marginTop: '15px', maxWidth: '400px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#787b86', marginBottom: '4px' }}>
@@ -115,6 +110,12 @@ export default function Home() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffb74d', fontWeight: 'bold', cursor: 'pointer', padding: '10px' }}>
                 <input type="checkbox" checked={cmd.adv_enabled} onChange={(e) => sendCommand({ adv_enabled: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Adv. Ranges
               </label>
+              
+              {/* NEW: The Genetic AI Toggle */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ab47bc', fontWeight: 'bold', cursor: 'pointer', padding: '10px' }}>
+                <input type="checkbox" checked={cmd.use_genetic} onChange={(e) => sendCommand({ use_genetic: e.target.checked })} style={{ width: '18px', height: '18px' }} /> 🧬 Genetic AI
+              </label>
+
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#26a69a', fontWeight: 'bold', cursor: 'pointer', padding: '10px' }}>
                 <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Auto-Loop
               </label>
@@ -151,7 +152,6 @@ export default function Home() {
                   <input type="number" step="0.1" value={cmd.sl_max} onChange={(e) => sendCommand({ sl_max: parseFloat(e.target.value) })} style={{ width: '80px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
                 </div>
               </div>
-              {/* NEW: Max Logic Gates */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>MAX LOGIC GATES</label>
                 <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '100px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
