@@ -125,7 +125,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* NEW: Advanced Settings Dropdown */}
+          {/* Advanced Settings Dropdown */}
           {cmd.adv_enabled && (
             <div style={{ borderTop: '1px solid #2b2b36', paddingTop: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -149,9 +149,13 @@ export default function Home() {
                   <input type="number" step="0.1" value={cmd.sl_max} onChange={(e) => sendCommand({ sl_max: parseFloat(e.target.value) })} style={{ width: '80px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
                 </div>
               </div>
+              {/* NEW: Max Logic Gates */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>MAX LOGIC GATES</label>
+                <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '100px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
+              </div>
             </div>
           )}
-        </div>
 
         {/* Data Table */}
         {data.length === 0 ? ( 
