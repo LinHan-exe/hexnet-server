@@ -156,6 +156,11 @@ export default function Home() {
                 <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>MAX LOGIC GATES</label>
                 <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '100px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
               </div>
+              {/* NEW: Dynamic Trade Scaling */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>IDEAL MAX TRADES/DAY</label>
+                <input type="number" step="0.5" value={cmd.ideal_tpd} onChange={(e) => sendCommand({ ideal_tpd: parseFloat(e.target.value) })} style={{ width: '120px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
+              </div>
             </div>
           )}
         </div>
