@@ -5,11 +5,11 @@ global.commandState = global.commandState || {
   status: 'idle', engine_status: 'offline', last_seen: 0,
   mode: 'Generate Random Strategies', strategy: '', sims: 1000, 
   sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
-  // NEW: Advanced Generator Settings
-  adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0,
-  // NEW: Progress Tracking
+  // NEW: Added logic_max to the advanced settings
+  adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2,
   progress: 0, total_sims: 1000
 };
+
 export async function GET() {
   const now = Date.now();
   
