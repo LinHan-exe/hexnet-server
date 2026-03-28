@@ -5,7 +5,9 @@ export default function Home() {
   const [data, setData] = useState([]);
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
   const [cmd, setCmd] = useState({
-    status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: []
+    status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
+    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2,
+    progress: 0, total_sims: 1000
   });
 
   useEffect(() => {
@@ -44,11 +46,11 @@ export default function Home() {
     });
   };
 
- return (
+  return (
     <div style={{ backgroundColor: '#0d1117', color: '#d1d4dc', minHeight: '100vh', padding: '40px', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ maxWidth: '1500px', margin: '0 auto' }}>
         
-        {/* Header Section with NEW Progress Bar */}
+        {/* Header Section */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #2b2b36', paddingBottom: '20px', marginBottom: '20px', flexWrap: 'wrap', gap: '20px' }}>
           <div style={{ flex: '1 1 300px' }}>
             <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#ffffff' }}>Hexnet Remote Command</h1>
@@ -156,6 +158,7 @@ export default function Home() {
               </div>
             </div>
           )}
+        </div>
 
         {/* Data Table */}
         {data.length === 0 ? ( 
