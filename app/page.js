@@ -57,8 +57,23 @@ export default function Home() {
             {cmd.engine_status === 'running' && (
               <div style={{ marginTop: '15px', maxWidth: '400px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#787b86', marginBottom: '4px' }}>
-                  <span>Optimization Progress</span>
-                  <span>{cmd.progress} / {cmd.total_sims}</span>
+                  {cmd.engine_status === 'running' && (
+              <div style={{ marginTop: '15px', maxWidth: '450px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#787b86', marginBottom: '6px', fontWeight: 'bold' }}>
+                  <span>
+                    Optimization Progress 
+                    <span style={{color: '#ab47bc', marginLeft: '10px', fontWeight: 'normal'}}>
+                      ({cmd.sims_sec?.toLocaleString() || 0} sims/sec)
+                    </span>
+                  </span>
+                  <span style={{color: '#26a69a'}}>ETA: {cmd.eta || '--:--:--'}</span>
+                  <span style={{color: '#ffffff'}}>{cmd.progress?.toLocaleString()} / {cmd.total_sims?.toLocaleString()}</span>
+                </div>
+                <div style={{ width: '100%', backgroundColor: '#2b2b36', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, (cmd.progress / (cmd.total_sims || 1)) * 100)}%`, backgroundColor: '#26a69a', height: '100%', transition: 'width 0.5s' }} />
+                </div>
+              </div>
+            )}
                 </div>
                 <div style={{ width: '100%', backgroundColor: '#2b2b36', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min(100, (cmd.progress / (cmd.total_sims || 1)) * 100)}%`, backgroundColor: '#26a69a', height: '100%', transition: 'width 0.5s' }} />
