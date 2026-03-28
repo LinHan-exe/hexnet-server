@@ -6,7 +6,7 @@ global.commandState = global.commandState || {
   mode: 'Generate Random Strategies', strategy: '', sims: 1000, 
   sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
   adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, 
-  ideal_tpd: 2.0, use_genetic: false, // <--- ADDED ideal_tpd
+  ideal_tpd: 2.0, ideal_ev: 10.0, use_genetic: false, // <--- ADDED ideal_ev HERE
   progress: 0, total_sims: 1000
 };
 
