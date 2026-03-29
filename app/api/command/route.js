@@ -1,14 +1,25 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
+// Initialize the global state cache if it doesn't exist
 global.commandState = global.commandState || {
-  status: 'idle', engine_status: 'offline', last_seen: 0,
-  mode: 'Generate Random Strategies', strategy: '', sims: 1000, 
-  sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
+  status: 'idle', 
+  engine_status: 'offline', 
+  last_seen: 0,
+  mode: 'Generate Random Strategies', 
+  strategy: '', 
+  sims: 1000, 
+  sort: 'Composite Score (Best Overall)', 
+  auto: true, 
+  available_strats: [],
   adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, 
-  ideal_tpd: 2.0, ideal_ev: 10.0, use_genetic: false,
-  progress: 0, total_sims: 1000, 
-  eta: '--:--:--', sims_sec: 0 // <--- ADDED THESE TWO!
+  ideal_tpd: 2.0, 
+  ideal_ev: 10.0, 
+  use_genetic: false,
+  progress: 0, 
+  total_sims: 1000, 
+  eta: '--:--:--', 
+  sims_sec: 0
 };
 
 export async function GET() {
@@ -28,13 +39,21 @@ export async function GET() {
 }
 
 export async function POST(req) {
-  const body = await req.json();
-  global.commandState = { ...global.commandState, ...body };
+  try {
+      const body = await req.json();
+      
+      // The spread operator beautifully overwrites only the keys Python sends
+      global.commandState = { ...global.commandState, ...body };
 
-  // If Python is checking in with its engine status, update the stopwatch!
-  if (body.engine_status) {
-      global.commandState.last_seen = Date.now();
+      // If Python is checking in, update the stopwatch!
+      if (body.engine_status) {
+          global.commandState.last_seen = Date.now();
+      }
+
+      return NextResponse.json({ success: true });
+      
+  } catch (error) {
+      // Prevents Vercel from crashing if a corrupted payload arrives
+      return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 });
   }
-
-  return NextResponse.json({ success: true });
 }
