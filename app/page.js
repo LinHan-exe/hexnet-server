@@ -54,29 +54,54 @@ export default function Home() {
               ● Engine Status: {(cmd.engine_status || 'OFFLINE').toUpperCase()} 
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
+            
+            {/* The Cleaned Up Progress Card */}
             {cmd.engine_status === 'running' && (
-              <div style={{ marginTop: '15px', maxWidth: '400px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#787b86', marginBottom: '4px' }}>
-                  {cmd.engine_status === 'running' && (
-              <div style={{ marginTop: '15px', maxWidth: '450px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#787b86', marginBottom: '6px', fontWeight: 'bold' }}>
-                  <span>
-                    Optimization Progress 
-                    <span style={{color: '#ab47bc', marginLeft: '10px', fontWeight: 'normal'}}>
-                      ({cmd.sims_sec?.toLocaleString() || 0} sims/sec)
-                    </span>
+              <div style={{ 
+                marginTop: '20px', 
+                width: '100%', 
+                maxWidth: '550px', 
+                backgroundColor: '#1e1e24', 
+                padding: '16px', 
+                borderRadius: '8px', 
+                border: '1px solid #333' 
+              }}>
+                {/* Title & Percentage */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
+                  <span style={{ color: '#ffffff' }}>Optimization Progress</span>
+                  <span style={{ color: '#26a69a' }}>
+                    {((cmd.progress / (cmd.total_sims || 1)) * 100).toFixed(1)}%
                   </span>
-                  <span style={{color: '#26a69a'}}>ETA: {cmd.eta || '--:--:--'}</span>
-                  <span style={{color: '#ffffff'}}>{cmd.progress?.toLocaleString()} / {cmd.total_sims?.toLocaleString()}</span>
                 </div>
-                <div style={{ width: '100%', backgroundColor: '#2b2b36', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min(100, (cmd.progress / (cmd.total_sims || 1)) * 100)}%`, backgroundColor: '#26a69a', height: '100%', transition: 'width 0.5s' }} />
+
+                {/* The Progress Bar */}
+                <div style={{ width: '100%', backgroundColor: '#2b2b36', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '14px' }}>
+                  <div style={{ 
+                    width: `${Math.min(100, (cmd.progress / (cmd.total_sims || 1)) * 100)}%`, 
+                    backgroundColor: '#26a69a', 
+                    height: '100%', 
+                    transition: 'width 0.3s ease' 
+                  }} />
                 </div>
-              </div>
-            )}
-                </div>
-                <div style={{ width: '100%', backgroundColor: '#2b2b36', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min(100, (cmd.progress / (cmd.total_sims || 1)) * 100)}%`, backgroundColor: '#26a69a', height: '100%', transition: 'width 0.5s' }} />
+
+                {/* Structured Stats Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#a0a0a0', fontFamily: 'monospace' }}>
+                  <span>
+                    <span style={{ color: '#ffffff' }}>{cmd.progress?.toLocaleString()}</span> 
+                    {" / "}{cmd.total_sims?.toLocaleString()} Sims
+                  </span>
+                  
+                  <span style={{ color: '#444' }}>|</span>
+                  
+                  <span style={{ color: '#ab47bc' }}>
+                    Speed: {cmd.sims_sec?.toLocaleString() || 0} / sec
+                  </span>
+
+                  <span style={{ color: '#444' }}>|</span>
+
+                  <span style={{ color: '#ffb74d' }}>
+                    ETA: {cmd.eta || '--:--:--'}
+                  </span>
                 </div>
               </div>
             )}
@@ -172,7 +197,7 @@ export default function Home() {
                 <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>IDEAL MAX TRADES/DAY</label>
                 <input type="number" step="0.5" value={cmd.ideal_tpd} onChange={(e) => sendCommand({ ideal_tpd: parseFloat(e.target.value) })} style={{ width: '140px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
               </div>
-              {/* NEW: IDEAL EV INPUT */}
+              {/* IDEAL EV INPUT */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV ($)</label>
                 <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '100px', padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' }} />
