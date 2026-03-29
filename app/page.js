@@ -51,6 +51,9 @@ export default function Home() {
             <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#ffffff' }}>Hexnet Remote Command</h1>
             <p style={{ margin: 0, color: cmd.engine_status === 'running' || cmd.engine_status === 'fetching' ? '#26a69a' : cmd.engine_status === 'offline' ? '#ef5350' : '#ffb74d', fontWeight: 'bold' }}>
               ● Engine Status: {(cmd.engine_status || 'OFFLINE').toUpperCase()} 
+              {cmd.engine_status === 'fetching' && cmd.fetch_pct && (
+                 <span style={{ color: '#29b6f6', marginLeft: '10px' }}>[{cmd.fetch_pct}%]</span>
+              )}
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
             
