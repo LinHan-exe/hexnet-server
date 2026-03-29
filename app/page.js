@@ -85,7 +85,7 @@ export default function Home() {
         {/* NEW: Data & Feature Engineering Panel */}
         <div style={{ backgroundColor: '#161b22', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ margin: '0 0 10px 0', color: '#29b6f6' }}>Data Engine (Feature Engineering)</h3>
+            <h3 style={{ margin: '0 0 10px 0', color: '#29b6f6' }}>Data Engine</h3>
             <p style={{ margin: 0, color: '#a0a0a0', fontSize: '14px' }}>
               Currently Loaded: <strong style={{ color: '#fff' }}>{cmd.data_ticker}</strong> | Window: <strong style={{ color: '#fff' }}>{cmd.data_start}</strong> to <strong style={{ color: '#fff' }}>{cmd.data_end}</strong>
             </p>
