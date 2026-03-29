@@ -11,7 +11,7 @@ global.commandState = global.commandState || {
   
   // --- NEW: Data & Walk-Forward State ---
   data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A',
-  fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true,
+  fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
   is_start: '', is_end: '', oos_start: '', oos_end: ''
 };
 
