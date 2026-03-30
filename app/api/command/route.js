@@ -17,12 +17,21 @@ global.commandState = global.commandState || {
 
 export async function GET() {
   const now = Date.now();
-  if (now - global.commandState.last_seen > 25000) {
+  
+  // THE FIX: Extended to 30,000ms (30 seconds)
+  // We also check that last_seen > 0 to prevent the "1970 Cold Start" bug 
+  // from instantly overriding a fetch or optimization request!
+  if (global.commandState.last_seen > 0 && (now - global.commandState.last_seen > 30000)) {
       global.commandState.engine_status = 'offline';
+      
       if (['sync_requested', 'stop_requested', 'fetch_requested'].includes(global.commandState.status)) {
           global.commandState.status = 'idle';
       }
+  } else if (global.commandState.last_seen === 0) {
+      // If it's a completely fresh node, default to offline but don't wipe pending commands
+      global.commandState.engine_status = 'offline';
   }
+  
   return NextResponse.json(global.commandState);
 }
 
