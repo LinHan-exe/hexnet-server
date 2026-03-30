@@ -62,7 +62,15 @@ export default function Home() {
   const sendCommand = async (updates) => {
     const newState = { ...cmd, ...updates };
     setCmd(newState);
-    await fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    
+    // --- THE FIX: Send 'newState' instead of 'updates' ---
+    // This blasts the ENTIRE UI state to the cloud on every click, 
+    // ensuring blank servers instantly inherit your exact settings.
+    await fetch('/api/command', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(newState) 
+    });
   };
 
   const inputStyle = { padding: '10px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' };
