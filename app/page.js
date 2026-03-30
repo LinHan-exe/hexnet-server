@@ -1,14 +1,16 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function Home() {
   const [data, setData] = useState([]);
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
+  const isFirstLoad = useRef(true); // <--- THE FIX: Protects your inputs!
+
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, ideal_tpd: 2.0, ideal_ev: 10.0, use_genetic: false,
     progress: 0, total_sims: 1000,
-    data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true,
+    data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
     is_start: '', is_end: '', oos_start: '', oos_end: ''
   });
 
@@ -21,13 +23,37 @@ export default function Home() {
         
         const resCmd = await fetch('/api/command');
         const jsonCmd = await resCmd.json();
-        if (jsonCmd) setCmd(jsonCmd);
+        
+        if (jsonCmd) {
+          setCmd(prev => {
+            // First load: Grab everything so the UI matches the server
+            if (isFirstLoad.current) {
+              isFirstLoad.current = false;
+              return jsonCmd;
+            }
+            // Subsequent loads: ONLY update read-only status metrics to prevent input overwriting
+            return {
+              ...prev,
+              engine_status: jsonCmd.engine_status,
+              progress: jsonCmd.progress,
+              total_sims: jsonCmd.total_sims,
+              eta: jsonCmd.eta,
+              sims_sec: jsonCmd.sims_sec,
+              data_ticker: jsonCmd.data_ticker,
+              data_start: jsonCmd.data_start,
+              data_end: jsonCmd.data_end,
+              status: jsonCmd.status,
+              fetch_pct: jsonCmd.fetch_pct
+            };
+          });
+        }
 
         setLastUpdate(new Date().toLocaleTimeString());
       } catch (err) { 
         setLastUpdate("Offline / Error");
       }
     };
+    
     fetchAll();
     const interval = setInterval(fetchAll, 5000);
     return () => clearInterval(interval);
@@ -51,12 +77,9 @@ export default function Home() {
             <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#ffffff' }}>Hexnet Remote Command</h1>
             <p style={{ margin: 0, color: cmd.engine_status === 'running' || cmd.engine_status === 'fetching' ? '#26a69a' : cmd.engine_status === 'offline' ? '#ef5350' : '#ffb74d', fontWeight: 'bold' }}>
               ● Engine Status: {(cmd.engine_status || 'OFFLINE').toUpperCase()} 
-              
-              {/* THE FIX: Remove the '&& cmd.fetch_pct' trap and provide a default of 0 */}
               {cmd.engine_status === 'fetching' && (
                  <span style={{ color: '#29b6f6', marginLeft: '10px' }}>[{cmd.fetch_pct !== undefined ? cmd.fetch_pct : 0}%]</span>
               )}
-              
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
             
@@ -88,7 +111,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* NEW: Data & Feature Engineering Panel */}
+        {/* Data & Feature Engineering Panel */}
         <div style={{ backgroundColor: '#161b22', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between' }}>
           <div>
             <h3 style={{ margin: '0 0 10px 0', color: '#29b6f6' }}>Data Engine</h3>
@@ -156,7 +179,7 @@ export default function Home() {
               </div>
             </div>
             
-            {/* NEW: Walk-Forward Windows */}
+            {/* Walk-Forward Windows */}
             <div style={{ display: 'flex', gap: '15px', padding: '10px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #333' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', color: '#4CAF50', fontWeight: 'bold' }}>IN-SAMPLE WINDOW</label>
@@ -196,7 +219,6 @@ export default function Home() {
           {/* Advanced Settings Dropdown */}
           {cmd.adv_enabled && (
             <div style={{ borderTop: '1px solid #2b2b36', marginTop: '20px', paddingTop: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              {/* ... (Same as previous Advanced Settings inputs) ... */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>SMA MIN / MAX</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
