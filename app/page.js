@@ -4,11 +4,13 @@ import { useEffect, useState, useRef } from 'react';
 export default function Home() {
   const [data, setData] = useState([]);
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
-  const isFirstLoad = useRef(true); // <--- THE FIX: Protects your inputs!
+  const isFirstLoad = useRef(true); 
 
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
-    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, ideal_tpd: 2.0, ideal_ev: 10.0, use_genetic: false,
+    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, ideal_tpd: 2.0, ideal_ev: 10.0, 
+    min_wfe: 0.0, // <--- ADDED TO STATE
+    use_genetic: false,
     progress: 0, total_sims: 1000,
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
     is_start: '', is_end: '', oos_start: '', oos_end: ''
@@ -26,12 +28,10 @@ export default function Home() {
         
         if (jsonCmd) {
           setCmd(prev => {
-            // First load: Grab everything so the UI matches the server
             if (isFirstLoad.current) {
               isFirstLoad.current = false;
               return jsonCmd;
             }
-            // Subsequent loads: ONLY update read-only status metrics to prevent input overwriting
             return {
               ...prev,
               engine_status: jsonCmd.engine_status,
@@ -47,7 +47,6 @@ export default function Home() {
             };
           });
         }
-
         setLastUpdate(new Date().toLocaleTimeString());
       } catch (err) { 
         setLastUpdate("Offline / Error");
@@ -62,10 +61,6 @@ export default function Home() {
   const sendCommand = async (updates) => {
     const newState = { ...cmd, ...updates };
     setCmd(newState);
-    
-    // --- THE FIX: Send 'newState' instead of 'updates' ---
-    // This blasts the ENTIRE UI state to the cloud on every click, 
-    // ensuring blank servers instantly inherit your exact settings.
     await fetch('/api/command', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
@@ -259,6 +254,11 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV ($)</label>
                 <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '100px', ...inputStyle }} />
+              </div>
+              {/* --- NEW: MIN WFE FILTER --- */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN WFE % FILTER</label>
+                <input type="number" step="1.0" value={cmd.min_wfe} onChange={(e) => sendCommand({ min_wfe: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
               </div>
             </div>
           )}
