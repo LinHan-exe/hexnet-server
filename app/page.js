@@ -10,10 +10,11 @@ export default function Home() {
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
-    use_genetic: false,
-    progress: 0, total_sims: 1000,
+    use_genetic: false, progress: 0, total_sims: 1000,
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
-    is_start: '', is_end: '', oos_list: [{ start: '', end: '' }]
+    is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
+    hv_start: '', hv_end: '', hv_oos_list: [{ start: '', end: '' }],
+    lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }]
   });
 
   useEffect(() => {
@@ -34,16 +35,8 @@ export default function Home() {
             }
             return {
               ...prev,
-              engine_status: jsonCmd.engine_status,
-              progress: jsonCmd.progress,
-              total_sims: jsonCmd.total_sims,
-              eta: jsonCmd.eta,
-              sims_sec: jsonCmd.sims_sec,
-              data_ticker: jsonCmd.data_ticker,
-              data_start: jsonCmd.data_start,
-              data_end: jsonCmd.data_end,
-              status: jsonCmd.status,
-              fetch_pct: jsonCmd.fetch_pct
+              engine_status: jsonCmd.engine_status, progress: jsonCmd.progress, total_sims: jsonCmd.total_sims, eta: jsonCmd.eta, sims_sec: jsonCmd.sims_sec,
+              data_ticker: jsonCmd.data_ticker, data_start: jsonCmd.data_start, data_end: jsonCmd.data_end, status: jsonCmd.status, fetch_pct: jsonCmd.fetch_pct
             };
           });
         }
@@ -62,13 +55,11 @@ export default function Home() {
     const newState = { ...cmd, ...updates };
     setCmd(newState);
     await fetch('/api/command', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(newState) 
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newState) 
     });
   };
 
-  const inputStyle = { padding: '10px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px' };
+  const inputStyle = { padding: '8px', backgroundColor: '#0d1117', color: 'white', border: '1px solid #333', borderRadius: '4px', fontSize: '13px' };
 
   return (
     <div style={{ backgroundColor: '#0d1117', color: '#d1d4dc', minHeight: '100vh', padding: '40px', fontFamily: 'system-ui, sans-serif' }}>
@@ -80,9 +71,7 @@ export default function Home() {
             <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#ffffff' }}>Hexnet Remote Command</h1>
             <p style={{ margin: 0, color: cmd.engine_status === 'running' || cmd.engine_status === 'fetching' ? '#26a69a' : cmd.engine_status === 'offline' ? '#ef5350' : '#ffb74d', fontWeight: 'bold' }}>
               ● Engine Status: {(cmd.engine_status || 'OFFLINE').toUpperCase()} 
-              {cmd.engine_status === 'fetching' && (
-                 <span style={{ color: '#29b6f6', marginLeft: '10px' }}>[{cmd.fetch_pct !== undefined ? cmd.fetch_pct : 0}%]</span>
-              )}
+              {cmd.engine_status === 'fetching' && <span style={{ color: '#29b6f6', marginLeft: '10px' }}>[{cmd.fetch_pct !== undefined ? cmd.fetch_pct : 0}%]</span>}
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
             
@@ -115,37 +104,36 @@ export default function Home() {
         </div>
 
         {/* Data & Feature Engineering Panel */}
-        <div style={{ backgroundColor: '#161b22', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between' }}>
+        <div style={{ backgroundColor: '#161b22', padding: '15px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '15px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ margin: '0 0 10px 0', color: '#29b6f6' }}>Data Engine</h3>
-            <p style={{ margin: 0, color: '#a0a0a0', fontSize: '14px' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#29b6f6', fontSize: '16px' }}>Data Engine</h3>
+            <p style={{ margin: 0, color: '#a0a0a0', fontSize: '13px' }}>
               Currently Loaded: <strong style={{ color: '#fff' }}>{cmd.data_ticker}</strong> | Window: <strong style={{ color: '#fff' }}>{cmd.data_start}</strong> to <strong style={{ color: '#fff' }}>{cmd.data_end}</strong>
             </p>
           </div>
-          
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>TICKER</label>
+              <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>TICKER</label>
               <input type="text" value={cmd.fetch_ticker} onChange={(e) => sendCommand({ fetch_ticker: e.target.value.toUpperCase() })} style={{ width: '80px', ...inputStyle }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>INTERVAL</label>
+              <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>INTERVAL</label>
               <select value={cmd.fetch_interval} onChange={(e) => sendCommand({ fetch_interval: e.target.value })} style={inputStyle}>
                 <option>1m</option><option>5m</option><option>15m</option><option>1h</option><option>1d</option>
               </select>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>START DATE</label>
+              <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>START DATE</label>
               <input type="date" value={cmd.fetch_start} onChange={(e) => sendCommand({ fetch_start: e.target.value })} style={inputStyle} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>END DATE</label>
+              <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>END DATE</label>
               <input type="date" value={cmd.fetch_end} onChange={(e) => sendCommand({ fetch_end: e.target.value })} style={inputStyle} />
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '13px', cursor: 'pointer', padding: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '12px', cursor: 'pointer', padding: '10px' }}>
               <input type="checkbox" checked={cmd.fetch_rth} onChange={(e) => sendCommand({ fetch_rth: e.target.checked })} style={{ width: '16px', height: '16px' }} /> Hide Ext. Hours
             </label>
-            <button onClick={() => sendCommand({ status: 'fetch_requested' })} disabled={cmd.status === 'fetch_requested' || cmd.engine_status === 'fetching' || cmd.engine_status === 'offline'} style={{ backgroundColor: '#29b6f6', color: '#000', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.status === 'fetch_requested' || cmd.engine_status === 'fetching' || cmd.engine_status === 'offline') ? 0.5 : 1 }}>
+            <button onClick={() => sendCommand({ status: 'fetch_requested' })} disabled={cmd.status === 'fetch_requested' || cmd.engine_status === 'fetching' || cmd.engine_status === 'offline'} style={{ backgroundColor: '#29b6f6', color: '#000', border: 'none', padding: '8px 15px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.status === 'fetch_requested' || cmd.engine_status === 'fetching' || cmd.engine_status === 'offline') ? 0.5 : 1 }}>
               {cmd.status === 'fetch_requested' || cmd.engine_status === 'fetching' ? 'FETCHING...' : 'REMOTE FETCH'}
             </button>
           </div>
@@ -153,150 +141,174 @@ export default function Home() {
 
         {/* Command Panel */}
         <div style={{ backgroundColor: '#1e222d', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '30px' }}>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', flex: 1 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 200px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>MODE</label>
-                <select value={cmd.mode} onChange={(e) => sendCommand({ mode: e.target.value })} style={inputStyle}>
-                  <option>Generate Random Strategies</option><option>Optimize Existing Strategy</option>
-                </select>
-              </div>
-              {cmd.mode === 'Optimize Existing Strategy' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 200px' }}>
-                  <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>BASE STRATEGY</label>
-                  <select value={cmd.strategy} onChange={(e) => sendCommand({ strategy: e.target.value })} style={inputStyle}>
-                    {(cmd.available_strats || []).map((s, i) => <option key={i} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '120px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>SIMULATIONS</label>
-                <input type="number" value={cmd.sims} onChange={(e) => sendCommand({ sims: parseInt(e.target.value) })} style={inputStyle} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 200px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>SORT BY</label>
-                <select value={cmd.sort} onChange={(e) => sendCommand({ sort: e.target.value })} style={inputStyle}>
-                  <option>Composite Score (Best Overall)</option><option>Walk-Forward Efficiency (WFE)</option><option>Strategy Sharpe</option>
-                  <option>Expected Value (EV)</option><option>Strategy Alpha</option><option>Net PnL</option>
-                </select>
-              </div>
+          
+          {/* ROW 1: Controls, Toggles, Buttons */}
+          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid #2b2b36', paddingBottom: '20px', marginBottom: '20px' }}>
+            <select value={cmd.mode} onChange={(e) => sendCommand({ mode: e.target.value })} style={{...inputStyle, width: '220px'}}>
+              <option>Generate Random Strategies</option>
+              <option>Optimize Existing Strategy</option>
+              <option>Generate Advanced Optimal Strategy</option>
+            </select>
+            
+            {cmd.mode === 'Optimize Existing Strategy' && (
+              <select value={cmd.strategy} onChange={(e) => sendCommand({ strategy: e.target.value })} style={{...inputStyle, width: '160px'}}>
+                {(cmd.available_strats || []).map((s, i) => <option key={i} value={s}>{s}</option>)}
+              </select>
+            )}
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>SIMS:</span>
+              <input type="number" value={cmd.sims} onChange={(e) => sendCommand({ sims: parseInt(e.target.value) })} style={{...inputStyle, width: '90px'}} />
             </div>
             
-            {/* Walk-Forward Windows */}
-            <div style={{ display: 'flex', gap: '15px', padding: '10px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #333' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#4CAF50', fontWeight: 'bold' }}>IN-SAMPLE WINDOW</label>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  <input type="date" value={cmd.is_start} onChange={(e) => sendCommand({ is_start: e.target.value })} style={inputStyle} title="Start Date" />
-                  <input type="date" value={cmd.is_end} onChange={(e) => sendCommand({ is_end: e.target.value })} style={inputStyle} title="End Date" />
-                </div>
-              </div>
+            <select value={cmd.sort} onChange={(e) => sendCommand({ sort: e.target.value })} style={{...inputStyle, width: '200px'}}>
+              <option>Composite Score (Best Overall)</option>
+              <option>Walk-Forward Efficiency (WFE)</option>
+              <option>Strategy Sharpe</option>
+              <option>Expected Value (EV)</option>
+              <option>Strategy Alpha</option>
+              <option>Net PnL</option>
+            </select>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: 'auto' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ffb74d', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                <input type="checkbox" checked={cmd.adv_enabled} onChange={(e) => sendCommand({ adv_enabled: e.target.checked })} style={{ width: '16px', height: '16px' }} /> Adv. Filters
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ab47bc', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                <input type="checkbox" checked={cmd.use_genetic} onChange={(e) => sendCommand({ use_genetic: e.target.checked })} style={{ width: '16px', height: '16px' }} /> 🧬 Genetic
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#26a69a', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '16px', height: '16px' }} /> Auto-Loop
+              </label>
               
-              {/* DYNAMIC OOS WINDOWS */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>OOS WINDOWS</label>
-                {(cmd.oos_list || [{start: '', end: ''}]).map((oos, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: '5px', marginBottom: '5px' }}>
-                    <input type="date" value={oos.start} onChange={(e) => {
-                      const newList = [...cmd.oos_list];
-                      newList[idx].start = e.target.value;
-                      sendCommand({ oos_list: newList });
-                    }} style={inputStyle} title="Start Date" />
-                    <input type="date" value={oos.end} onChange={(e) => {
-                      const newList = [...cmd.oos_list];
-                      newList[idx].end = e.target.value;
-                      sendCommand({ oos_list: newList });
-                    }} style={inputStyle} title="End Date" />
-                    {idx > 0 && (
-                      <button onClick={() => {
-                        const newList = cmd.oos_list.filter((_, i) => i !== idx);
-                        sendCommand({ oos_list: newList });
-                      }} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}>X</button>
-                    )}
+              <button onClick={() => sendCommand({ status: 'start_requested' })} disabled={cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline'} style={{ backgroundColor: '#26a69a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline') ? 0.5 : 1 }}>
+                {cmd.status === 'start_requested' ? 'STARTING...' : 'START'}
+              </button>
+              <button onClick={() => sendCommand({ status: 'stop_requested' })} disabled={cmd.engine_status === 'idle' || cmd.engine_status === 'offline' || cmd.status === 'stop_requested'} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'idle' || cmd.engine_status === 'offline' || cmd.status === 'stop_requested') ? 0.5 : 1 }}>
+                {cmd.status === 'stop_requested' ? 'STOPPING...' : 'STOP'}
+              </button>
+            </div>
+          </div>
+
+          {/* ROW 2: Time Windows & Adv Filters */}
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            
+            {/* Time Windows Container */}
+            {cmd.mode === 'Generate Advanced Optimal Strategy' ? (
+              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', flex: 1 }}>
+                {/* High Vol Panel */}
+                <div style={{ border: '1px solid #ef5350', padding: '10px', borderRadius: '6px', backgroundColor: '#131722', flex: 1, minWidth: '300px' }}>
+                  <label style={{ fontSize: '12px', color: '#ef5350', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>HIGH-VOL IS WINDOW</label>
+                  <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+                    <input type="date" value={cmd.hv_start} onChange={(e) => sendCommand({ hv_start: e.target.value })} style={{...inputStyle, flex: 1}} title="Start Date" />
+                    <input type="date" value={cmd.hv_end} onChange={(e) => sendCommand({ hv_end: e.target.value })} style={{...inputStyle, flex: 1}} title="End Date" />
                   </div>
-                ))}
-                <button onClick={() => {
-                  const newList = [...(cmd.oos_list || []), {start: '', end: ''}];
-                  sendCommand({ oos_list: newList });
-                }} style={{ backgroundColor: '#ab47bc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px', fontSize: '12px', fontWeight: 'bold' }}>+ Add Window</button>
+                  <label style={{ fontSize: '12px', color: '#ef5350', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>HIGH-VOL OOS WINDOWS</label>
+                  {(cmd.hv_oos_list || [{start: '', end: ''}]).map((oos, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '5px', marginBottom: '5px' }}>
+                      <input type="date" value={oos.start} onChange={(e) => { const l = [...cmd.hv_oos_list]; l[idx].start = e.target.value; sendCommand({ hv_oos_list: l }); }} style={{...inputStyle, flex: 1}} />
+                      <input type="date" value={oos.end} onChange={(e) => { const l = [...cmd.hv_oos_list]; l[idx].end = e.target.value; sendCommand({ hv_oos_list: l }); }} style={{...inputStyle, flex: 1}} />
+                      {idx > 0 && <button onClick={() => sendCommand({ hv_oos_list: cmd.hv_oos_list.filter((_, i) => i !== idx) })} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}>X</button>}
+                    </div>
+                  ))}
+                  <button onClick={() => sendCommand({ hv_oos_list: [...(cmd.hv_oos_list || []), {start: '', end: ''}] })} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px', fontSize: '11px', fontWeight: 'bold', width: '100%' }}>+ Add Window</button>
+                </div>
+                {/* Low Vol Panel */}
+                <div style={{ border: '1px solid #26a69a', padding: '10px', borderRadius: '6px', backgroundColor: '#131722', flex: 1, minWidth: '300px' }}>
+                  <label style={{ fontSize: '12px', color: '#26a69a', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>LOW-VOL IS WINDOW</label>
+                  <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+                    <input type="date" value={cmd.lv_start} onChange={(e) => sendCommand({ lv_start: e.target.value })} style={{...inputStyle, flex: 1}} title="Start Date" />
+                    <input type="date" value={cmd.lv_end} onChange={(e) => sendCommand({ lv_end: e.target.value })} style={{...inputStyle, flex: 1}} title="End Date" />
+                  </div>
+                  <label style={{ fontSize: '12px', color: '#26a69a', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>LOW-VOL OOS WINDOWS</label>
+                  {(cmd.lv_oos_list || [{start: '', end: ''}]).map((oos, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '5px', marginBottom: '5px' }}>
+                      <input type="date" value={oos.start} onChange={(e) => { const l = [...cmd.lv_oos_list]; l[idx].start = e.target.value; sendCommand({ lv_oos_list: l }); }} style={{...inputStyle, flex: 1}} />
+                      <input type="date" value={oos.end} onChange={(e) => { const l = [...cmd.lv_oos_list]; l[idx].end = e.target.value; sendCommand({ lv_oos_list: l }); }} style={{...inputStyle, flex: 1}} />
+                      {idx > 0 && <button onClick={() => sendCommand({ lv_oos_list: cmd.lv_oos_list.filter((_, i) => i !== idx) })} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}>X</button>}
+                    </div>
+                  ))}
+                  <button onClick={() => sendCommand({ lv_oos_list: [...(cmd.lv_oos_list || []), {start: '', end: ''}] })} style={{ backgroundColor: '#26a69a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px', fontSize: '11px', fontWeight: 'bold', width: '100%' }}>+ Add Window</button>
+                </div>
               </div>
-            </div>
-          </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '15px', padding: '15px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #333' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', color: '#4CAF50', fontWeight: 'bold' }}>IN-SAMPLE WINDOW</label>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <input type="date" value={cmd.is_start} onChange={(e) => sendCommand({ is_start: e.target.value })} style={inputStyle} title="Start Date" />
+                    <input type="date" value={cmd.is_end} onChange={(e) => sendCommand({ is_end: e.target.value })} style={inputStyle} title="End Date" />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>OOS WINDOWS</label>
+                  {(cmd.oos_list || [{start: '', end: ''}]).map((oos, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '5px', marginBottom: '5px' }}>
+                      <input type="date" value={oos.start} onChange={(e) => { const newList = [...cmd.oos_list]; newList[idx].start = e.target.value; sendCommand({ oos_list: newList }); }} style={inputStyle} title="Start Date" />
+                      <input type="date" value={oos.end} onChange={(e) => { const newList = [...cmd.oos_list]; newList[idx].end = e.target.value; sendCommand({ oos_list: newList }); }} style={inputStyle} title="End Date" />
+                      {idx > 0 && <button onClick={() => sendCommand({ oos_list: cmd.oos_list.filter((_, i) => i !== idx) })} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}>X</button>}
+                    </div>
+                  ))}
+                  <button onClick={() => sendCommand({ oos_list: [...(cmd.oos_list || []), {start: '', end: ''}] })} style={{ backgroundColor: '#ab47bc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px', fontSize: '12px', fontWeight: 'bold' }}>+ Add Window</button>
+                </div>
+              </div>
+            )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '15px', borderTop: '1px solid #2b2b36', paddingTop: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffb74d', fontWeight: 'bold', cursor: 'pointer' }}>
-              <input type="checkbox" checked={cmd.adv_enabled} onChange={(e) => sendCommand({ adv_enabled: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Adv. Ranges & Filters
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ab47bc', fontWeight: 'bold', cursor: 'pointer' }}>
-              <input type="checkbox" checked={cmd.use_genetic} onChange={(e) => sendCommand({ use_genetic: e.target.checked })} style={{ width: '18px', height: '18px' }} /> 🧬 Genetic AI
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#26a69a', fontWeight: 'bold', cursor: 'pointer' }}>
-              <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Auto-Loop
-            </label>
-            <button onClick={() => sendCommand({ status: 'start_requested' })} disabled={cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline'} style={{ backgroundColor: '#26a69a', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline') ? 0.5 : 1 }}>
-              {cmd.status === 'start_requested' ? 'STARTING...' : 'START'}
-            </button>
-            <button onClick={() => sendCommand({ status: 'stop_requested' })} disabled={cmd.engine_status === 'idle' || cmd.engine_status === 'offline' || cmd.status === 'stop_requested'} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'idle' || cmd.engine_status === 'offline' || cmd.status === 'stop_requested') ? 0.5 : 1 }}>
-              {cmd.status === 'stop_requested' ? 'STOPPING...' : 'STOP'}
-            </button>
+            {/* Advanced Settings Container */}
+            {cmd.adv_enabled && (
+              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '15px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #ffb74d', flex: 1, minWidth: '400px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>SMA MIN/MAX</label>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <input type="number" value={cmd.sma_min} onChange={(e) => sendCommand({ sma_min: parseInt(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                    <input type="number" value={cmd.sma_max} onChange={(e) => sendCommand({ sma_max: parseInt(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>TP MIN/MAX</label>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <input type="number" step="0.1" value={cmd.tp_min} onChange={(e) => sendCommand({ tp_min: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                    <input type="number" step="0.1" value={cmd.tp_max} onChange={(e) => sendCommand({ tp_max: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>SL MIN/MAX</label>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <input type="number" step="0.1" value={cmd.sl_min} onChange={(e) => sendCommand({ sl_min: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                    <input type="number" step="0.1" value={cmd.sl_max} onChange={(e) => sendCommand({ sl_max: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>MAX GATES</label>
+                  <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL TPD</label>
+                  <input type="number" step="0.5" value={cmd.ideal_tpd} onChange={(e) => sendCommand({ ideal_tpd: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV ($)</label>
+                  <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN WFE %</label>
+                  <input type="number" step="1.0" value={cmd.min_wfe} onChange={(e) => sendCommand({ min_wfe: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN WR %</label>
+                  <input type="number" step="1.0" value={cmd.min_wr} onChange={(e) => sendCommand({ min_wr: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN NET PNL</label>
+                  <input type="number" step="1.0" value={cmd.min_pnl} onChange={(e) => sendCommand({ min_pnl: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN SHARPE</label>
+                  <input type="number" step="0.1" value={cmd.min_sharpe} onChange={(e) => sendCommand({ min_sharpe: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Advanced Settings Dropdown */}
-          {cmd.adv_enabled && (
-            <div style={{ borderTop: '1px solid #2b2b36', marginTop: '20px', paddingTop: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>SMA MIN / MAX</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="number" value={cmd.sma_min} onChange={(e) => sendCommand({ sma_min: parseInt(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
-                  <input type="number" value={cmd.sma_max} onChange={(e) => sendCommand({ sma_max: parseInt(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>TP (xATR) MIN / MAX</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="number" step="0.1" value={cmd.tp_min} onChange={(e) => sendCommand({ tp_min: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
-                  <input type="number" step="0.1" value={cmd.tp_max} onChange={(e) => sendCommand({ tp_max: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>SL (xATR) MIN / MAX</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="number" step="0.1" value={cmd.sl_min} onChange={(e) => sendCommand({ sl_min: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
-                  <input type="number" step="0.1" value={cmd.sl_max} onChange={(e) => sendCommand({ sl_max: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>MAX LOGIC GATES</label>
-                <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '100px', ...inputStyle }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>IDEAL MAX TRADES/DAY</label>
-                <input type="number" step="0.5" value={cmd.ideal_tpd} onChange={(e) => sendCommand({ ideal_tpd: parseFloat(e.target.value) })} style={{ width: '140px', ...inputStyle }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV ($)</label>
-                <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '100px', ...inputStyle }} />
-              </div>
-              
-              {/* THE NEW HARD FILTERS */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN WFE % FILTER</label>
-                <input type="number" step="1.0" value={cmd.min_wfe} onChange={(e) => sendCommand({ min_wfe: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN WINRATE %</label>
-                <input type="number" step="1.0" value={cmd.min_wr} onChange={(e) => sendCommand({ min_wr: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN NET PNL</label>
-                <input type="number" step="1.0" value={cmd.min_pnl} onChange={(e) => sendCommand({ min_pnl: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN SHARPE</label>
-                <input type="number" step="0.1" value={cmd.min_sharpe} onChange={(e) => sendCommand({ min_sharpe: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Data Table */}
