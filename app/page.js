@@ -8,12 +8,12 @@ export default function Home() {
 
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
-    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, ideal_tpd: 2.0, ideal_ev: 10.0, 
-    min_wfe: 0.0, // <--- ADDED TO STATE
+    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 3.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
+    min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
     use_genetic: false,
     progress: 0, total_sims: 1000,
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
-    is_start: '', is_end: '', oos_start: '', oos_end: ''
+    is_start: '', is_end: '', oos_list: [{ start: '', end: '' }]
   });
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export default function Home() {
 
         {/* Command Panel */}
         <div style={{ backgroundColor: '#1e222d', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '30px' }}>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', flex: 1 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 200px' }}>
                 <label style={{ fontSize: '12px', color: '#787b86', fontWeight: 'bold' }}>MODE</label>
@@ -191,19 +191,41 @@ export default function Home() {
                   <input type="date" value={cmd.is_end} onChange={(e) => sendCommand({ is_end: e.target.value })} style={inputStyle} title="End Date" />
                 </div>
               </div>
+              
+              {/* DYNAMIC OOS WINDOWS */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>OOS WINDOW</label>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  <input type="date" value={cmd.oos_start} onChange={(e) => sendCommand({ oos_start: e.target.value })} style={inputStyle} title="Start Date" />
-                  <input type="date" value={cmd.oos_end} onChange={(e) => sendCommand({ oos_end: e.target.value })} style={inputStyle} title="End Date" />
-                </div>
+                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>OOS WINDOWS</label>
+                {(cmd.oos_list || [{start: '', end: ''}]).map((oos, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '5px', marginBottom: '5px' }}>
+                    <input type="date" value={oos.start} onChange={(e) => {
+                      const newList = [...cmd.oos_list];
+                      newList[idx].start = e.target.value;
+                      sendCommand({ oos_list: newList });
+                    }} style={inputStyle} title="Start Date" />
+                    <input type="date" value={oos.end} onChange={(e) => {
+                      const newList = [...cmd.oos_list];
+                      newList[idx].end = e.target.value;
+                      sendCommand({ oos_list: newList });
+                    }} style={inputStyle} title="End Date" />
+                    {idx > 0 && (
+                      <button onClick={() => {
+                        const newList = cmd.oos_list.filter((_, i) => i !== idx);
+                        sendCommand({ oos_list: newList });
+                      }} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}>X</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => {
+                  const newList = [...(cmd.oos_list || []), {start: '', end: ''}];
+                  sendCommand({ oos_list: newList });
+                }} style={{ backgroundColor: '#ab47bc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px', fontSize: '12px', fontWeight: 'bold' }}>+ Add Window</button>
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '15px', borderTop: '1px solid #2b2b36', paddingTop: '20px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffb74d', fontWeight: 'bold', cursor: 'pointer' }}>
-              <input type="checkbox" checked={cmd.adv_enabled} onChange={(e) => sendCommand({ adv_enabled: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Adv. Ranges
+              <input type="checkbox" checked={cmd.adv_enabled} onChange={(e) => sendCommand({ adv_enabled: e.target.checked })} style={{ width: '18px', height: '18px' }} /> Adv. Ranges & Filters
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ab47bc', fontWeight: 'bold', cursor: 'pointer' }}>
               <input type="checkbox" checked={cmd.use_genetic} onChange={(e) => sendCommand({ use_genetic: e.target.checked })} style={{ width: '18px', height: '18px' }} /> 🧬 Genetic AI
@@ -255,10 +277,23 @@ export default function Home() {
                 <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV ($)</label>
                 <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '100px', ...inputStyle }} />
               </div>
-              {/* --- NEW: MIN WFE FILTER --- */}
+              
+              {/* THE NEW HARD FILTERS */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN WFE % FILTER</label>
                 <input type="number" step="1.0" value={cmd.min_wfe} onChange={(e) => sendCommand({ min_wfe: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN WINRATE %</label>
+                <input type="number" step="1.0" value={cmd.min_wr} onChange={(e) => sendCommand({ min_wr: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN NET PNL</label>
+                <input type="number" step="1.0" value={cmd.min_pnl} onChange={(e) => sendCommand({ min_pnl: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', color: '#ab47bc', fontWeight: 'bold' }}>MIN SHARPE</label>
+                <input type="number" step="0.1" value={cmd.min_sharpe} onChange={(e) => sendCommand({ min_sharpe: parseFloat(e.target.value) })} style={{ width: '110px', ...inputStyle }} />
               </div>
             </div>
           )}
