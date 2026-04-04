@@ -12,8 +12,12 @@ global.commandState = global.commandState || {
   progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
   data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A',
   fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
-  is_start: '', is_end: '', 
-  oos_list: [{ start: '', end: '' }]
+  
+  // Standard Dates
+  is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
+  // Mega Mode Dates
+  hv_start: '', hv_end: '', hv_oos_list: [{ start: '', end: '' }],
+  lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }]
 };
 
 export async function GET() {
