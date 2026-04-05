@@ -78,7 +78,8 @@ export default function Home() {
             {cmd.engine_status === 'running' && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
-                  <span style={{ color: '#ffffff' }}>Optimization Progress</span>
+                  {/* --- THE FIX: Display the Stage Text if it exists! --- */}
+                  <span style={{ color: '#ffffff' }}>{cmd.stage_text ? cmd.stage_text : 'Optimization Progress'}</span>
                   <span style={{ color: '#26a69a' }}>{((cmd.progress / (cmd.total_sims || 1)) * 100).toFixed(1)}%</span>
                 </div>
                 <div style={{ width: '100%', backgroundColor: '#2b2b36', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '14px' }}>
