@@ -4,26 +4,42 @@ import { useEffect, useState, useRef } from 'react';
 export default function Home() {
   const [data, setData] = useState([]);
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
+  
   const isFirstLoad = useRef(true); 
+  const previousStatus = useRef('offline');
 
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
-    use_genetic: false, progress: 0, total_sims: 1000,
+    use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
     is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
     hv_start: '', hv_end: '', hv_oos_list: [{ start: '', end: '' }],
-    lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }]
+    lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }],
+    stage_text: '' // New stage text variable initialized
   });
 
   useEffect(() => {
-    const fetchAll = async () => {
+    let timeoutId;
+
+    // 1. Decoupled Data Fetcher (Only runs when absolutely necessary)
+    const fetchTableData = async () => {
       try {
         const resData = await fetch('/api/upload');
         const jsonData = await resData.json();
         if (jsonData && jsonData.length > 0) setData(jsonData);
-        
+      } catch (err) {
+        console.error("Data fetch error:", err);
+      }
+    };
+
+    // Fetch the heavy data table once on initial load
+    fetchTableData();
+
+    // 2. Adaptive Status Poller
+    const pollCommandState = async () => {
+      try {
         const resCmd = await fetch('/api/command');
         const jsonCmd = await resCmd.json();
         
@@ -35,20 +51,43 @@ export default function Home() {
             }
             return {
               ...prev,
-              engine_status: jsonCmd.engine_status, progress: jsonCmd.progress, total_sims: jsonCmd.total_sims, eta: jsonCmd.eta, sims_sec: jsonCmd.sims_sec,
-              data_ticker: jsonCmd.data_ticker, data_start: jsonCmd.data_start, data_end: jsonCmd.data_end, status: jsonCmd.status, fetch_pct: jsonCmd.fetch_pct
+              engine_status: jsonCmd.engine_status, progress: jsonCmd.progress, total_sims: jsonCmd.total_sims, 
+              eta: jsonCmd.eta, sims_sec: jsonCmd.sims_sec, data_ticker: jsonCmd.data_ticker, 
+              data_start: jsonCmd.data_start, data_end: jsonCmd.data_end, status: jsonCmd.status, 
+              fetch_pct: jsonCmd.fetch_pct, stage_text: jsonCmd.stage_text // Sync stage text from backend
             };
           });
+
+          // Smart Data Reloading
+          // If the engine JUST finished running, or a sync was requested, fetch the heavy data table.
+          const justFinished = previousStatus.current === 'running' && jsonCmd.engine_status === 'idle';
+          const justSynced = previousStatus.current === 'sync_requested' && jsonCmd.status === 'idle';
+          
+          if (justFinished || justSynced) {
+            fetchTableData();
+          }
+          
+          // Track status for the next loop
+          previousStatus.current = jsonCmd.engine_status === 'running' ? 'running' : jsonCmd.status;
         }
         setLastUpdate(new Date().toLocaleTimeString());
+
+        // Adaptive Polling Speed
+        const isBusy = jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching';
+        const nextPingDelay = isBusy ? 2000 : 15000; // 2s if active, 15s if asleep
+        
+        timeoutId = setTimeout(pollCommandState, nextPingDelay);
+
       } catch (err) { 
         setLastUpdate("Offline / Error");
+        timeoutId = setTimeout(pollCommandState, 15000); // Back off to 15s if server errors
       }
     };
     
-    fetchAll();
-    const interval = setInterval(fetchAll, 5000);
-    return () => clearInterval(interval);
+    // Kick off the infinite adaptive loop
+    pollCommandState();
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const sendCommand = async (updates) => {
@@ -78,7 +117,7 @@ export default function Home() {
             {cmd.engine_status === 'running' && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
-                  {/* --- THE FIX: Display the Stage Text if it exists! --- */}
+                  {/* Dynamic Stage Text Display */}
                   <span style={{ color: '#ffffff' }}>{cmd.stage_text ? cmd.stage_text : 'Optimization Progress'}</span>
                   <span style={{ color: '#26a69a' }}>{((cmd.progress / (cmd.total_sims || 1)) * 100).toFixed(1)}%</span>
                 </div>
