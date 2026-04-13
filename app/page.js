@@ -74,7 +74,7 @@ export default function Home() {
 
         // Adaptive Polling Speed
         const isBusy = jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching';
-        const nextPingDelay = isBusy ? 2000 : 15000; // 2s if active, 15s if asleep
+        const nextPingDelay = isBusy ? 5000 : 15000; // 5s if active, 15s if asleep
         
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
