@@ -9,7 +9,7 @@ export default function Home() {
   const previousStatus = useRef('offline');
 
   const [cmd, setCmd] = useState({
-    status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
+    status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [],
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
@@ -17,7 +17,7 @@ export default function Home() {
     is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
     hv_start: '', hv_end: '', hv_oos_list: [{ start: '', end: '' }],
     lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }],
-    stage_text: '' // New stage text variable initialized
+    stage_text: ''
   });
 
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function Home() {
               engine_status: jsonCmd.engine_status, progress: jsonCmd.progress, total_sims: jsonCmd.total_sims, 
               eta: jsonCmd.eta, sims_sec: jsonCmd.sims_sec, data_ticker: jsonCmd.data_ticker, 
               data_start: jsonCmd.data_start, data_end: jsonCmd.data_end, status: jsonCmd.status, 
-              fetch_pct: jsonCmd.fetch_pct, stage_text: jsonCmd.stage_text // Sync stage text from backend
+              fetch_pct: jsonCmd.fetch_pct, stage_text: jsonCmd.stage_text, auto_max: jsonCmd.auto_max
             };
           });
 
@@ -74,7 +74,7 @@ export default function Home() {
 
         // Adaptive Polling Speed
         const isBusy = jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching';
-        const nextPingDelay = isBusy ? 5000 : 15000; // 5s if active, 15s if asleep
+        const nextPingDelay = isBusy ? 2000 : 15000; // 2s if active, 15s if asleep
         
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
@@ -117,7 +117,6 @@ export default function Home() {
             {cmd.engine_status === 'running' && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
-                  {/* Dynamic Stage Text Display */}
                   <span style={{ color: '#ffffff' }}>{cmd.stage_text ? cmd.stage_text : 'Optimization Progress'}</span>
                   <span style={{ color: '#26a69a' }}>{((cmd.progress / (cmd.total_sims || 1)) * 100).toFixed(1)}%</span>
                 </div>
@@ -217,9 +216,19 @@ export default function Home() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ab47bc', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
                 <input type="checkbox" checked={cmd.use_genetic} onChange={(e) => sendCommand({ use_genetic: e.target.checked })} style={{ width: '16px', height: '16px' }} /> 🧬 Genetic
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#26a69a', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
-                <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '16px', height: '16px' }} /> Auto-Loop
-              </label>
+
+              {/* AUTOLOOP CONTROLS */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#26a69a', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                  <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '16px', height: '16px' }} /> Auto-Loop
+                </label>
+                {cmd.auto && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '5px', backgroundColor: '#131722', padding: '2px 6px', borderRadius: '4px', border: '1px solid #333' }}>
+                    <span style={{ fontSize: '11px', color: '#787b86' }}>MAX:</span>
+                    <input type="number" min="1" max="999" value={cmd.auto_max || 10} onChange={(e) => sendCommand({ auto_max: parseInt(e.target.value) || 1 })} style={{ width: '50px', backgroundColor: 'transparent', color: 'white', border: 'none', outline: 'none', fontSize: '13px' }} title="Max Auto-Loops" />
+                  </div>
+                )}
+              </div>
               
               <button onClick={() => sendCommand({ status: 'start_requested' })} disabled={cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline'} style={{ backgroundColor: '#26a69a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', opacity: (cmd.engine_status === 'running' || cmd.status === 'start_requested' || cmd.engine_status === 'offline') ? 0.5 : 1 }}>
                 {cmd.status === 'start_requested' ? 'STARTING...' : 'START'}
