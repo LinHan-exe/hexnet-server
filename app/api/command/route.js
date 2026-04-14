@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 global.commandState = global.commandState || {
   status: 'idle', engine_status: 'syncing...', last_seen: Date.now(),
   mode: 'Generate Random Strategies', strategy: '', sims: 1000, 
-  sort: 'Composite Score (Best Overall)', auto: true, available_strats: [],
+  sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [], // <-- ADDED auto_max
   adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, 
   ideal_tpd: 3.0, ideal_ev: 10.0, 
   min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
