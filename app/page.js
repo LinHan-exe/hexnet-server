@@ -73,8 +73,8 @@ export default function Home() {
         }
         setLastUpdate(new Date().toLocaleTimeString());
 
-        const isBusy = jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching';
-        const nextPingDelay = isBusy ? 2000 : 15000;
+        // Constant 5-Second Polling (Backed by Redis)
+        const nextPingDelay = 5000; 
         
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
