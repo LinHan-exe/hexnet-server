@@ -483,7 +483,7 @@ export default function Home() {
           </>
         )}
 
-        {/* Data Table (Dynamically Swaps to Strategy Name for Backtests) */}
+        {/* Data Table (Dynamically Swaps based on Backtest vs Optimization) */}
         {data.length === 0 ? ( 
           <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
             <h3 style={{ color: '#787b86' }}>Waiting for Python Engine...</h3> 
@@ -493,29 +493,44 @@ export default function Home() {
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}> 
               <thead> 
                 <tr style={{ backgroundColor: '#1e222d', borderBottom: '1px solid #2b2b36', fontSize: '14px', textTransform: 'uppercase' }}> 
-                  <th style={{ padding: '15px 20px', color: '#787b86' }}>{data[0]?.Name ? 'Strategy Name' : 'Rank'}</th> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>{data[0]?.PF !== undefined ? 'Strategy Name' : 'Rank'}</th> 
+                  {data[0]?.PF !== undefined && <th style={{ padding: '15px 20px', color: '#787b86' }}>Equity Curve</th>}
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>SQN Sharpe</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Win Rate</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Trades</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Net PnL</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Exp. Value</th> 
                   <th style={{ padding: '15px 20px', color: '#ffb74d' }}>Alpha</th> 
-                  <th style={{ padding: '15px 20px', color: '#ab47bc' }}>WFE %</th> 
+                  <th style={{ padding: '15px 20px', color: '#ab47bc' }}>{data[0]?.PF !== undefined ? 'Profit Factor' : 'WFE %'}</th> 
                 </tr> 
               </thead> 
               <tbody> 
-                {data.slice(0, 10).map((row, i) => ( 
+                {data.slice(0, 15).map((row, i) => ( 
                   <tr key={i} style={{ borderBottom: '1px solid #2b2b36', transition: 'background-color 0.2s', ':hover': { backgroundColor: '#1e222d' } }}> 
                     <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ffffff' }}>
                       {row.Name ? row.Name : `#${i + 1}`}
                     </td> 
+                    
+                    {/* Render the PnL Graph if this is a Live Backtest */}
+                    {data[0]?.PF !== undefined && (
+                      <td style={{ padding: '5px 20px', verticalAlign: 'middle' }}>
+                        <Sparkline data={row.ChartData} color={row.PnL >= 0 ? '#26a69a' : '#ef5350'} />
+                      </td>
+                    )}
+
                     <td style={{ padding: '15px 20px', fontWeight: 'bold', color: row.Sharpe >= 1.0 ? '#26a69a' : '#ef5350' }}>{row.Sharpe?.toFixed(2)}</td> 
                     <td style={{ padding: '15px 20px' }}>{row.WinRate?.toFixed(1)}%</td> 
                     <td style={{ padding: '15px 20px' }}>{row.Trades}</td> 
-                    <td style={{ padding: '15px 20px', color: row.PnL >= 0 ? '#26a69a' : '#ef5350' }}>{row.PnL?.toFixed(2)}</td> 
+                    <td style={{ padding: '15px 20px', color: row.PnL >= 0 ? '#26a69a' : '#ef5350', fontWeight: 'bold' }}>{row.PnL?.toFixed(2)}</td> 
                     <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ab47bc' }}>{row.EV?.toFixed(2)}</td> 
                     <td style={{ padding: '15px 20px', color: row.Alpha >= 0 ? '#ffb74d' : '#ef5350', fontWeight: 'bold' }}>{row.Alpha?.toFixed(2)}</td> 
-                    <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>{row.WFE !== undefined ? `${row.WFE.toFixed(1)}%` : 'N/A'}</td> 
+                    
+                    {/* Render PF if Backtest, WFE if Generator */}
+                    <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>
+                      {data[0]?.PF !== undefined 
+                        ? (row.PF !== undefined ? row.PF.toFixed(2) : 'N/A') 
+                        : (row.WFE !== undefined ? `${row.WFE.toFixed(1)}%` : 'N/A')}
+                    </td> 
                   </tr> 
                 ))} 
               </tbody> 
