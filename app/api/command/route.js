@@ -1,21 +1,28 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
+import { createClient } from 'redis';
 
-// Grab the URLs (Checking both Vercel KV and raw Upstash formats)
-const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Grab the standard Redis URL from Vercel's secure environment
+const redisUrl = process.env.REDIS_URL || process.env.KV_URL;
 
-if (!redisUrl || !redisToken) {
-  console.error("🚨 CRITICAL ERROR: Redis Environment Variables are missing!");
-  console.error("Please check your Vercel Project Settings -> Environment Variables, and redeploy the app.");
+if (!redisUrl) {
+  console.error("🚨 CRITICAL ERROR: REDIS_URL environment variable is missing!");
 }
 
-// Initialize Redis connection
-const redis = new Redis({
-  url: redisUrl || "https://dummy-url.upstash.io", // Dummy URL prevents instant crash if missing
-  token: redisToken || "dummy-token",
-});
+// Create a singleton client for the serverless environment
+let redisClient = null;
+
+async function getClient() {
+  if (!redisClient) {
+    redisClient = createClient({ url: redisUrl });
+    redisClient.on('error', (err) => console.error('Redis Client Error', err));
+    await redisClient.connect();
+  }
+  if (!redisClient.isOpen) {
+    await redisClient.connect();
+  }
+  return redisClient;
+}
 
 const DEFAULT_STATE = {
   status: 'idle', engine_status: 'offline', last_seen: 0,
@@ -35,8 +42,10 @@ const DEFAULT_STATE = {
 
 export async function GET() {
   try {
-    let state = await redis.get('hexnet_command_state');
-    if (!state) state = DEFAULT_STATE;
+    const client = await getClient();
+    const rawData = await client.get('hexnet_command_state');
+    
+    let state = rawData ? JSON.parse(rawData) : DEFAULT_STATE;
 
     const now = Date.now();
     // If Python hasn't pinged in 30 seconds, mark it offline
@@ -45,7 +54,7 @@ export async function GET() {
       if (['sync_requested', 'stop_requested', 'fetch_requested', 'backtest_requested'].includes(state.status)) {
         state.status = 'idle';
       }
-      await redis.set('hexnet_command_state', state);
+      await client.set('hexnet_command_state', JSON.stringify(state));
     }
     
     return NextResponse.json(state);
@@ -58,8 +67,10 @@ export async function GET() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    let currentState = await redis.get('hexnet_command_state');
-    if (!currentState) currentState = DEFAULT_STATE;
+    const client = await getClient();
+    
+    const rawData = await client.get('hexnet_command_state');
+    let currentState = rawData ? JSON.parse(rawData) : DEFAULT_STATE;
 
     // Merge the new updates into the persistent state
     const newState = { ...currentState, ...body };
@@ -67,7 +78,7 @@ export async function POST(req) {
     // Update the heartbeat timestamp ONLY if the Python engine is the one pinging
     if (body.engine_status) newState.last_seen = Date.now();
 
-    await redis.set('hexnet_command_state', newState);
+    await client.set('hexnet_command_state', JSON.stringify(newState));
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Redis POST Error:", error);
