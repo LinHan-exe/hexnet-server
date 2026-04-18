@@ -1,64 +1,67 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
+import { Redis } from '@upstash/redis';
 
-global.commandState = global.commandState || {
-  status: 'idle', 
-  engine_status: 'syncing...', 
-  last_seen: Date.now(),
-  mode: 'Generate Random Strategies', 
-  strategy: '', 
-  sims: 1000,
-  sort: 'Composite Score (Best Overall)', 
-  auto: true, 
-  auto_max: 10,
-  
-  available_strats: [], 
-  active_strats: [], // <-- NEW: Array of strategy names enabled for backtesting
-  
-  adv_enabled: false, 
-  sma_min: 10, sma_max: 200, 
-  tp_min: 0.5, tp_max: 5.0,
-  sl_min: 0.5, sl_max: 5.0, 
-  logic_max: 2,
-  ideal_tpd: 3.0, ideal_ev: 10.0,
+// Initialize Redis connection
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+const DEFAULT_STATE = {
+  status: 'idle', engine_status: 'offline', last_seen: 0,
+  mode: 'Generate Random Strategies', strategy: '', sims: 1000,
+  sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10,
+  available_strats: [], active_strats: [],
+  adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0,
+  sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0,
   min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
-  use_genetic: false,
-  
-  progress: 0, 
-  total_sims: 1000, 
-  
-  // <-- NEW: Dedicated trade simulation counter
-  trade_progress: { current: 0, total: 0 }, 
-  
-  eta: '--:--:--', 
-  sims_sec: 0,
-  data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A',
+  use_genetic: false, progress: 0, total_sims: 1000, trade_progress: { current: 0, total: 0 },
+  eta: '--:--:--', sims_sec: 0, data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A',
   fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '',
-  fetch_rth: true, fetch_pct: 0,
-  is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
+  fetch_rth: true, fetch_pct: 0, is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
   hv_start: '', hv_end: '', hv_oos_list: [{ start: '', end: '' }],
-  lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }],
-  stage_text: '' 
+  lv_start: '', lv_end: '', lv_oos_list: [{ start: '', end: '' }], stage_text: ''
 };
 
 export async function GET() {
-  const now = Date.now();
-  if (now - global.commandState.last_seen > 30000) {
-    global.commandState.engine_status = 'offline';
-    if (['sync_requested', 'stop_requested', 'fetch_requested', 'backtest_requested'].includes(global.commandState.status)) {
-      global.commandState.status = 'idle';
+  try {
+    let state = await redis.get('hexnet_command_state');
+    if (!state) state = DEFAULT_STATE;
+
+    const now = Date.now();
+    // If Python hasn't pinged in 30 seconds, mark it offline
+    if (now - (state.last_seen || 0) > 30000) {
+      state.engine_status = 'offline';
+      if (['sync_requested', 'stop_requested', 'fetch_requested', 'backtest_requested'].includes(state.status)) {
+        state.status = 'idle';
+      }
+      await redis.set('hexnet_command_state', state);
     }
+    
+    return NextResponse.json(state);
+  } catch (error) {
+    console.error("Redis GET Error:", error);
+    return NextResponse.json(DEFAULT_STATE);
   }
-  return NextResponse.json(global.commandState);
 }
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    global.commandState = { ...global.commandState, ...body };
-    if (body.engine_status) global.commandState.last_seen = Date.now();
+    let currentState = await redis.get('hexnet_command_state');
+    if (!currentState) currentState = DEFAULT_STATE;
+
+    // Merge the new updates into the persistent state
+    const newState = { ...currentState, ...body };
+    
+    // Update the heartbeat timestamp ONLY if the Python engine is the one pinging
+    if (body.engine_status) newState.last_seen = Date.now();
+
+    await redis.set('hexnet_command_state', newState);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 });
+    console.error("Redis POST Error:", error);
+    return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
   }
 }
