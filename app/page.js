@@ -108,14 +108,12 @@ export default function Home() {
   };
 
   const startBacktest = () => {
-    // 1. Optimistically force the UI into a 'running' state instantly
     setCmd(prev => ({ 
       ...prev, 
       engine_status: 'running', 
-      stage_text: 'Initializing Live Backtest...' 
+      stage_text: 'Calculating Strategy Data...' 
     }));
     
-    // 2. Dispatch the command to Redis
     sendCommand({ 
       status: 'backtest_requested', 
       mode: 'Backtest Specific Strategies', 
@@ -146,7 +144,8 @@ export default function Home() {
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
             
-            {cmd.engine_status === 'running' && (
+            {/* OPTIMIZER / GENERATOR PROGRESS BAR */}
+            {cmd.engine_status === 'running' && !cmd.stage_text?.includes('Calculating') && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
                   <span style={{ color: '#ffffff' }}>{cmd.stage_text ? cmd.stage_text : 'Optimization Progress'}</span>
@@ -161,6 +160,18 @@ export default function Home() {
                   <span style={{ color: '#ab47bc' }}>Speed: {cmd.sims_sec?.toLocaleString() || 0} / sec</span>
                   <span style={{ color: '#444' }}>|</span>
                   <span style={{ color: '#ffb74d' }}>ETA: {cmd.eta || '--:--:--'}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* NEW: LIVE BACKTEST INDICATOR */}
+            {cmd.engine_status === 'running' && cmd.stage_text?.includes('Calculating') && (
+              <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #4CAF50' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold' }}>
+                  <span style={{ color: '#ffffff' }}>🚀 Live Backtest in Progress...</span>
+                </div>
+                <div style={{ fontSize: '13px', color: '#a0a0a0', marginTop: '8px' }}>
+                  Hexnet is currently processing order flow matrices and backtesting the selected strategies across historical data. Results will appear below momentarily.
                 </div>
               </div>
             )}
