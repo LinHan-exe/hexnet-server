@@ -2,10 +2,19 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 
+// Grab the URLs (Checking both Vercel KV and raw Upstash formats)
+const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+if (!redisUrl || !redisToken) {
+  console.error("🚨 CRITICAL ERROR: Redis Environment Variables are missing!");
+  console.error("Please check your Vercel Project Settings -> Environment Variables, and redeploy the app.");
+}
+
 // Initialize Redis connection
 const redis = new Redis({
-  url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN,
+  url: redisUrl || "https://dummy-url.upstash.io", // Dummy URL prevents instant crash if missing
+  token: redisToken || "dummy-token",
 });
 
 const DEFAULT_STATE = {
