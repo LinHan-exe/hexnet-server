@@ -1,6 +1,32 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 
+const Sparkline = ({ data, color }) => {
+  if (!data || data.length === 0) return <span style={{color: '#787b86'}}>No Trades</span>;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min === 0 ? 1 : max - min;
+  
+  // Map points to SVG coordinates
+  const points = data.map((val, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = 100 - ((val - min) / range) * 100;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const zeroY = 100 - ((0 - min) / range) * 100;
+
+  return (
+    <svg viewBox="0 -5 100 110" style={{ width: '140px', height: '45px', overflow: 'visible', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }}>
+      {/* Draw the Zero Line if PnL crosses zero */}
+      {min < 0 && max > 0 && (
+        <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="#555" strokeDasharray="3" strokeWidth="1.5" />
+      )}
+      <polyline fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
+  );
+};
+
 export default function Home() {
   const [data, setData] = useState([]);
   const [lastUpdate, setLastUpdate] = useState("Connecting...");
