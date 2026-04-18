@@ -8,16 +8,16 @@ export default function Home() {
   const isFirstLoad = useRef(true); 
   const previousStatus = useRef('offline');
 
-  // NEW: Tab State
+  // Tab State
   const [activeTab, setActiveTab] = useState('generator');
 
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [],
-    active_strats: [], // <-- NEW
+    active_strats: [], // Tracks which strategies are toggled ON
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
-    trade_progress: { current: 0, total: 0 }, // <-- NEW
+    trade_progress: { current: 0, total: 0 },
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
     is_start: '', is_end: '', oos_list: [{ start: '', end: '' }],
     hv_start: '', hv_end: '', hv_oos_list: [{ start: '', end: '' }],
@@ -28,7 +28,6 @@ export default function Home() {
   useEffect(() => {
     let timeoutId;
 
-    // 1. Decoupled Data Fetcher (Only runs when absolutely necessary)
     const fetchTableData = async () => {
       try {
         const resData = await fetch('/api/upload');
@@ -39,10 +38,8 @@ export default function Home() {
       }
     };
 
-    // Fetch the heavy data table once on initial load
     fetchTableData();
 
-    // 2. Adaptive Status Poller
     const pollCommandState = async () => {
       try {
         const resCmd = await fetch('/api/command');
@@ -60,38 +57,34 @@ export default function Home() {
               eta: jsonCmd.eta, sims_sec: jsonCmd.sims_sec, data_ticker: jsonCmd.data_ticker, 
               data_start: jsonCmd.data_start, data_end: jsonCmd.data_end, status: jsonCmd.status, 
               fetch_pct: jsonCmd.fetch_pct, stage_text: jsonCmd.stage_text, auto_max: jsonCmd.auto_max,
-              trade_progress: jsonCmd.trade_progress || prev.trade_progress // <-- Sync new trade progress
+              trade_progress: jsonCmd.trade_progress || prev.trade_progress,
+              available_strats: jsonCmd.available_strats || prev.available_strats,
+              active_strats: jsonCmd.active_strats || prev.active_strats
             };
           });
 
-          // Smart Data Reloading
+          // Smart Data Reloading triggered when Engine switches back to idle
           const justFinished = previousStatus.current === 'running' && jsonCmd.engine_status === 'idle';
           const justSynced = previousStatus.current === 'sync_requested' && jsonCmd.status === 'idle';
           
-          if (justFinished || justSynced) {
-            fetchTableData();
-          }
+          if (justFinished || justSynced) fetchTableData();
           
-          // Track status for the next loop
           previousStatus.current = jsonCmd.engine_status === 'running' ? 'running' : jsonCmd.status;
         }
         setLastUpdate(new Date().toLocaleTimeString());
 
-        // Adaptive Polling Speed
         const isBusy = jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching';
-        const nextPingDelay = isBusy ? 2000 : 15000; // 2s if active, 15s if asleep
+        const nextPingDelay = isBusy ? 2000 : 15000;
         
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
       } catch (err) { 
         setLastUpdate("Offline / Error");
-        timeoutId = setTimeout(pollCommandState, 15000); // Back off to 15s if server errors
+        timeoutId = setTimeout(pollCommandState, 15000); 
       }
     };
     
-    // Kick off the infinite adaptive loop
     pollCommandState();
-    
     return () => clearTimeout(timeoutId);
   }, []);
 
@@ -103,7 +96,7 @@ export default function Home() {
     });
   };
 
-  // --- NEW: Tab specific logic functions ---
+  // Remote Enabling & Disabling
   const handleToggleStrategy = (stratName) => {
     let newActive = [...(cmd.active_strats || [])];
     if (newActive.includes(stratName)) {
@@ -114,8 +107,9 @@ export default function Home() {
     sendCommand({ active_strats: newActive });
   };
 
+  // Pushes the exact list of enabled strategies to Python and runs the math worker
   const startBacktest = () => {
-    sendCommand({ status: 'backtest_requested', mode: 'Backtest Specific Strategies' });
+    sendCommand({ status: 'backtest_requested', mode: 'Backtest Specific Strategies', active_strats: cmd.active_strats });
   };
 
   const tabStyle = (tabName) => ({
@@ -160,7 +154,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* NEW: Dedicated Trade Simulation Progress Bar */}
+            {/* Trade Simulation Progress Bar */}
             {cmd.stage_text?.includes("Simulating Trades") && cmd.trade_progress?.total > 0 && (
               <div style={{ marginTop: '15px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #2962ff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
@@ -229,10 +223,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB CONTENT: STRATEGY GENERATOR (Original UI block) */}
+        {/* TAB CONTENT: STRATEGY GENERATOR */}
         {activeTab === 'generator' && (
           <>
-            {/* Data & Feature Engineering Panel */}
             <div style={{ backgroundColor: '#161b22', padding: '15px', borderRadius: '0 8px 8px 8px', border: '1px solid #2b2b36', marginBottom: '15px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between' }}>
               <div>
                 <h3 style={{ margin: '0 0 10px 0', color: '#29b6f6', fontSize: '16px' }}>Data Engine</h3>
@@ -268,10 +261,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Command Panel */}
             <div style={{ backgroundColor: '#1e222d', padding: '20px', borderRadius: '8px', border: '1px solid #2b2b36', marginBottom: '30px' }}>
-              
-              {/* ROW 1: Controls, Toggles, Buttons */}
               <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid #2b2b36', paddingBottom: '20px', marginBottom: '20px' }}>
                 <select value={cmd.mode} onChange={(e) => sendCommand({ mode: e.target.value })} style={{...inputStyle, width: '220px'}}>
                   <option>Generate Random Strategies</option>
@@ -307,7 +297,6 @@ export default function Home() {
                     <input type="checkbox" checked={cmd.use_genetic} onChange={(e) => sendCommand({ use_genetic: e.target.checked })} style={{ width: '16px', height: '16px' }} /> 🧬 Genetic
                   </label>
 
-                  {/* AUTOLOOP CONTROLS */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#26a69a', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
                       <input type="checkbox" checked={cmd.auto} onChange={(e) => sendCommand({ auto: e.target.checked })} style={{ width: '16px', height: '16px' }} /> Auto-Loop
@@ -329,13 +318,9 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ROW 2: Time Windows & Adv Filters */}
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                
-                {/* Time Windows Container */}
                 {cmd.mode === 'Generate Advanced Optimal Strategy' ? (
                   <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', flex: 1 }}>
-                    {/* High Vol Panel */}
                     <div style={{ border: '1px solid #ef5350', padding: '10px', borderRadius: '6px', backgroundColor: '#131722', flex: 1, minWidth: '300px' }}>
                       <label style={{ fontSize: '12px', color: '#ef5350', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>HIGH-VOL IS WINDOW</label>
                       <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -352,7 +337,6 @@ export default function Home() {
                       ))}
                       <button onClick={() => sendCommand({ hv_oos_list: [...(cmd.hv_oos_list || []), {start: '', end: ''}] })} style={{ backgroundColor: '#ef5350', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px', fontSize: '11px', fontWeight: 'bold', width: '100%' }}>+ Add Window</button>
                     </div>
-                    {/* Low Vol Panel */}
                     <div style={{ border: '1px solid #26a69a', padding: '10px', borderRadius: '6px', backgroundColor: '#131722', flex: 1, minWidth: '300px' }}>
                       <label style={{ fontSize: '12px', color: '#26a69a', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>LOW-VOL IS WINDOW</label>
                       <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -393,7 +377,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Advanced Settings Container */}
                 {cmd.adv_enabled && (
                   <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '15px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #ffb74d', flex: 1, minWidth: '400px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -449,47 +432,48 @@ export default function Home() {
                 )}
               </div>
             </div>
-
-            {/* Data Table */}
-            {data.length === 0 ? ( 
-              <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
-                <h3 style={{ color: '#787b86' }}>Waiting for Python Engine...</h3> 
-              </div> 
-            ) : ( 
-              <div style={{ overflowX: 'auto', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
-                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}> 
-                  <thead> 
-                    <tr style={{ backgroundColor: '#1e222d', borderBottom: '1px solid #2b2b36', fontSize: '14px', textTransform: 'uppercase' }}> 
-                      <th style={{ padding: '15px 20px', color: '#787b86' }}>Rank</th> 
-                      <th style={{ padding: '15px 20px', color: '#787b86' }}>SQN Sharpe</th> 
-                      <th style={{ padding: '15px 20px', color: '#787b86' }}>Win Rate</th> 
-                      <th style={{ padding: '15px 20px', color: '#787b86' }}>Trades</th> 
-                      <th style={{ padding: '15px 20px', color: '#787b86' }}>Net PnL</th> 
-                      <th style={{ padding: '15px 20px', color: '#787b86' }}>Exp. Value</th> 
-                      <th style={{ padding: '15px 20px', color: '#ffb74d' }}>Alpha</th> 
-                      <th style={{ padding: '15px 20px', color: '#ab47bc' }}>WFE %</th> 
-                    </tr> 
-                  </thead> 
-                  <tbody> 
-                    {data.slice(0, 10).map((row, i) => ( 
-                      <tr key={i} style={{ borderBottom: '1px solid #2b2b36', transition: 'background-color 0.2s', ':hover': { backgroundColor: '#1e222d' } }}> 
-                        <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ffffff' }}>#{i + 1}</td> 
-                        <td style={{ padding: '15px 20px', fontWeight: 'bold', color: row.Sharpe >= 1.0 ? '#26a69a' : '#ef5350' }}>{row.Sharpe?.toFixed(2)}</td> 
-                        <td style={{ padding: '15px 20px' }}>{row.WinRate?.toFixed(1)}%</td> 
-                        <td style={{ padding: '15px 20px' }}>{row.Trades}</td> 
-                        <td style={{ padding: '15px 20px', color: row.PnL >= 0 ? '#26a69a' : '#ef5350' }}>{row.PnL?.toFixed(2)}</td> 
-                        <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ab47bc' }}>{row.EV?.toFixed(2)}</td> 
-                        <td style={{ padding: '15px 20px', color: row.Alpha >= 0 ? '#ffb74d' : '#ef5350', fontWeight: 'bold' }}>{row.Alpha?.toFixed(2)}</td> 
-                        <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>{row.WFE !== undefined ? `${row.WFE.toFixed(1)}%` : 'N/A'}</td> 
-                      </tr> 
-                    ))} 
-                  </tbody> 
-                </table> 
-              </div> 
-            )}
           </>
         )}
 
+        {/* Data Table (Dynamically Swaps to Strategy Name for Backtests) */}
+        {data.length === 0 ? ( 
+          <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
+            <h3 style={{ color: '#787b86' }}>Waiting for Python Engine...</h3> 
+          </div> 
+        ) : ( 
+          <div style={{ overflowX: 'auto', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}> 
+              <thead> 
+                <tr style={{ backgroundColor: '#1e222d', borderBottom: '1px solid #2b2b36', fontSize: '14px', textTransform: 'uppercase' }}> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>{data[0]?.Name ? 'Strategy Name' : 'Rank'}</th> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>SQN Sharpe</th> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>Win Rate</th> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>Trades</th> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>Net PnL</th> 
+                  <th style={{ padding: '15px 20px', color: '#787b86' }}>Exp. Value</th> 
+                  <th style={{ padding: '15px 20px', color: '#ffb74d' }}>Alpha</th> 
+                  <th style={{ padding: '15px 20px', color: '#ab47bc' }}>WFE %</th> 
+                </tr> 
+              </thead> 
+              <tbody> 
+                {data.slice(0, 10).map((row, i) => ( 
+                  <tr key={i} style={{ borderBottom: '1px solid #2b2b36', transition: 'background-color 0.2s', ':hover': { backgroundColor: '#1e222d' } }}> 
+                    <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ffffff' }}>
+                      {row.Name ? row.Name : `#${i + 1}`}
+                    </td> 
+                    <td style={{ padding: '15px 20px', fontWeight: 'bold', color: row.Sharpe >= 1.0 ? '#26a69a' : '#ef5350' }}>{row.Sharpe?.toFixed(2)}</td> 
+                    <td style={{ padding: '15px 20px' }}>{row.WinRate?.toFixed(1)}%</td> 
+                    <td style={{ padding: '15px 20px' }}>{row.Trades}</td> 
+                    <td style={{ padding: '15px 20px', color: row.PnL >= 0 ? '#26a69a' : '#ef5350' }}>{row.PnL?.toFixed(2)}</td> 
+                    <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ab47bc' }}>{row.EV?.toFixed(2)}</td> 
+                    <td style={{ padding: '15px 20px', color: row.Alpha >= 0 ? '#ffb74d' : '#ef5350', fontWeight: 'bold' }}>{row.Alpha?.toFixed(2)}</td> 
+                    <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>{row.WFE !== undefined ? `${row.WFE.toFixed(1)}%` : 'N/A'}</td> 
+                  </tr> 
+                ))} 
+              </tbody> 
+            </table> 
+          </div> 
+        )}
       </div>
     </div>
   );
