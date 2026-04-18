@@ -107,9 +107,20 @@ export default function Home() {
     sendCommand({ active_strats: newActive });
   };
 
-  // Pushes the exact list of enabled strategies to Python and runs the math worker
   const startBacktest = () => {
-    sendCommand({ status: 'backtest_requested', mode: 'Backtest Specific Strategies', active_strats: cmd.active_strats });
+    // 1. Optimistically force the UI into a 'running' state instantly
+    setCmd(prev => ({ 
+      ...prev, 
+      engine_status: 'running', 
+      stage_text: 'Initializing Live Backtest...' 
+    }));
+    
+    // 2. Dispatch the command to Redis
+    sendCommand({ 
+      status: 'backtest_requested', 
+      mode: 'Backtest Specific Strategies', 
+      active_strats: cmd.active_strats 
+    });
   };
 
   const tabStyle = (tabName) => ({
