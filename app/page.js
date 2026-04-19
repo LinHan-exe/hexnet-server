@@ -1,15 +1,27 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 
-// --- NEW: SVG Equity Curve Renderer ---
+// --- NEW: Safe SVG Equity Curve Renderer ---
 const Sparkline = ({ data, color }) => {
-  if (!data || data.length === 0) return <span style={{color: '#787b86'}}>No Trades</span>;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
+  let parsedData = [];
+  
+  // Safely convert CSV stringified arrays back into real JavaScript arrays
+  try {
+    parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (e) {
+    return <span style={{color: '#787b86'}}>Data Error</span>;
+  }
+  
+  if (!Array.isArray(parsedData) || parsedData.length === 0) {
+    return <span style={{color: '#787b86'}}>No Trades</span>;
+  }
+  
+  const min = Math.min(...parsedData);
+  const max = Math.max(...parsedData);
   const range = max - min === 0 ? 1 : max - min;
   
-  const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * 100;
+  const points = parsedData.map((val, i) => {
+    const x = (i / (parsedData.length - 1)) * 100;
     const y = 100 - ((val - min) / range) * 100;
     return `${x},${y}`;
   }).join(' ');
@@ -17,7 +29,7 @@ const Sparkline = ({ data, color }) => {
   const zeroY = 100 - ((0 - min) / range) * 100;
 
   return (
-    <svg viewBox="0 -5 100 110" style={{ width: '140px', height: '45px', overflow: 'visible', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }}>
+    <svg viewBox="0 -5 100 110" preserveAspectRatio="none" style={{ width: '100%', minWidth: '120px', height: '45px', overflow: 'visible', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }}>
       {min < 0 && max > 0 && (
         <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="#555" strokeDasharray="3" strokeWidth="1.5" />
       )}
@@ -486,7 +498,7 @@ export default function Home() {
               <thead> 
                 <tr style={{ backgroundColor: '#1e222d', borderBottom: '1px solid #2b2b36', fontSize: '14px', textTransform: 'uppercase' }}> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>{data[0]?.PF !== undefined ? 'Strategy Name' : 'Rank'}</th> 
-                  {data[0]?.PF !== undefined && <th style={{ padding: '15px 20px', color: '#787b86' }}>Equity Curve</th>}
+                  {data[0]?.ChartData !== undefined && <th style={{ padding: '15px 20px', color: '#787b86' }}>Equity Curve</th>}
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>SQN Sharpe</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Win Rate</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Trades</th> 
@@ -504,7 +516,7 @@ export default function Home() {
                     </td> 
                     
                     {/* Render the PnL Graph if this is a Live Backtest */}
-                    {data[0]?.PF !== undefined && (
+                    {data[0]?.ChartData !== undefined && (
                       <td style={{ padding: '5px 20px', verticalAlign: 'middle' }}>
                         <Sparkline data={row.ChartData} color={row.PnL >= 0 ? '#26a69a' : '#ef5350'} />
                       </td>
