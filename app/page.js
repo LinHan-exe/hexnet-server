@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 
+// --- NEW: SVG Equity Curve Renderer ---
 const Sparkline = ({ data, color }) => {
   if (!data || data.length === 0) return <span style={{color: '#787b86'}}>No Trades</span>;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min === 0 ? 1 : max - min;
   
-  // Map points to SVG coordinates
   const points = data.map((val, i) => {
     const x = (i / (data.length - 1)) * 100;
     const y = 100 - ((val - min) / range) * 100;
@@ -18,7 +18,6 @@ const Sparkline = ({ data, color }) => {
 
   return (
     <svg viewBox="0 -5 100 110" style={{ width: '140px', height: '45px', overflow: 'visible', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }}>
-      {/* Draw the Zero Line if PnL crosses zero */}
       {min < 0 && max > 0 && (
         <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="#555" strokeDasharray="3" strokeWidth="1.5" />
       )}
@@ -34,12 +33,11 @@ export default function Home() {
   const isFirstLoad = useRef(true); 
   const previousStatus = useRef('offline');
 
-  // Tab State
   const [activeTab, setActiveTab] = useState('generator');
 
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [],
-    active_strats: [], // Tracks which strategies are toggled ON
+    active_strats: [], 
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
@@ -89,7 +87,6 @@ export default function Home() {
             };
           });
 
-          // Smart Data Reloading triggered when Engine switches back to idle
           const justFinished = previousStatus.current === 'running' && jsonCmd.engine_status === 'idle';
           const justSynced = previousStatus.current === 'sync_requested' && jsonCmd.status === 'idle';
           
@@ -100,13 +97,12 @@ export default function Home() {
         setLastUpdate(new Date().toLocaleTimeString());
 
         // Constant 5-Second Polling (Backed by Redis)
-        const nextPingDelay = 5000; 
-        
+        const nextPingDelay = 5000;
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
       } catch (err) { 
         setLastUpdate("Offline / Error");
-        timeoutId = setTimeout(pollCommandState, 15000); 
+        timeoutId = setTimeout(pollCommandState, 5000); 
       }
     };
     
@@ -122,7 +118,6 @@ export default function Home() {
     });
   };
 
-  // Remote Enabling & Disabling
   const handleToggleStrategy = (stratName) => {
     let newActive = [...(cmd.active_strats || [])];
     if (newActive.includes(stratName)) {
@@ -134,17 +129,14 @@ export default function Home() {
   };
 
   const startBacktest = () => {
+    // Optimistic UI Update
     setCmd(prev => ({ 
       ...prev, 
       engine_status: 'running', 
       stage_text: 'Calculating Strategy Data...' 
     }));
     
-    sendCommand({ 
-      status: 'backtest_requested', 
-      mode: 'Backtest Specific Strategies', 
-      active_strats: cmd.active_strats 
-    });
+    sendCommand({ status: 'backtest_requested', mode: 'Backtest Specific Strategies', active_strats: cmd.active_strats });
   };
 
   const tabStyle = (tabName) => ({
@@ -170,7 +162,7 @@ export default function Home() {
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
             
-            {/* OPTIMIZER / GENERATOR PROGRESS BAR */}
+            {/* OPTIMIZER PROGRESS BAR */}
             {cmd.engine_status === 'running' && !cmd.stage_text?.includes('Calculating') && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
@@ -190,7 +182,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* NEW: LIVE BACKTEST INDICATOR */}
+            {/* LIVE BACKTEST INDICATOR */}
             {cmd.engine_status === 'running' && cmd.stage_text?.includes('Calculating') && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #4CAF50' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold' }}>
@@ -202,7 +194,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* Trade Simulation Progress Bar */}
+            {/* Trade Simulation Engine Sync Progress */}
             {cmd.stage_text?.includes("Simulating Trades") && cmd.trade_progress?.total > 0 && (
               <div style={{ marginTop: '15px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #2962ff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
@@ -234,7 +226,7 @@ export default function Home() {
 
         {/* TAB CONTENT: LIVE BACKTESTER */}
         {activeTab === 'backtester' && (
-          <div style={{ backgroundColor: '#1e222d', padding: '30px', borderRadius: '0 8px 8px 8px', border: '1px solid #2b2b36' }}>
+          <div style={{ backgroundColor: '#1e222d', padding: '30px', borderRadius: '0 8px 8px 8px', border: '1px solid #2b2b36', marginBottom: '30px' }}>
             <h2 style={{ margin: '0 0 10px 0', color: '#ffffff' }}>Live Strategy Backtester</h2>
             <p style={{ color: '#a0a0a0', marginBottom: '25px' }}>Select strategies loaded on the Hexnet Desktop to route them through the multi-threaded simulation engine remotely.</p>
             
