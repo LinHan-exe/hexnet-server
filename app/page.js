@@ -118,7 +118,7 @@ export default function Home() {
         setLastUpdate(new Date().toLocaleTimeString());
 
         // ADAPTIVE POLLING SPEED (Protects Vercel API Limits)
-        let nextPingDelay = 10000; // Default: 10 seconds if idle
+        let nextPingDelay = 15000; // Default: 15 seconds if idle
         
         if (jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching') {
           nextPingDelay = 5000; // Fast: 5 seconds if actively crunching numbers
