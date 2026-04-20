@@ -76,7 +76,15 @@ export default function Home() {
 
     fetchTableData();
 
+    // 2. Highly Optimized Adaptive Status Poller
     const pollCommandState = async () => {
+      // ANTI-ZOMBIE MEASURE: If the user switches tabs or minimizes the window, 
+      // do not ping Vercel. Save API requests!
+      if (document.hidden) {
+        timeoutId = setTimeout(pollCommandState, 5000); // Check if tab is visible again in 5s
+        return; 
+      }
+
       try {
         const resCmd = await fetch('/api/command');
         const jsonCmd = await resCmd.json();
@@ -99,6 +107,7 @@ export default function Home() {
             };
           });
 
+          // Smart Data Reloading
           const justFinished = previousStatus.current === 'running' && jsonCmd.engine_status === 'idle';
           const justSynced = previousStatus.current === 'sync_requested' && jsonCmd.status === 'idle';
           
@@ -108,13 +117,20 @@ export default function Home() {
         }
         setLastUpdate(new Date().toLocaleTimeString());
 
-        // Constant 5-Second Polling (Backed by Redis)
-        const nextPingDelay = 5000;
+        // ADAPTIVE POLLING SPEED (Protects Vercel API Limits)
+        let nextPingDelay = 10000; // Default: 10 seconds if idle
+        
+        if (jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching') {
+          nextPingDelay = 3000; // Fast: 3 seconds if actively crunching numbers
+        } else if (jsonCmd?.engine_status === 'offline') {
+          nextPingDelay = 30000; // Slow: 30 seconds if the desktop app is closed
+        }
+        
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
       } catch (err) { 
         setLastUpdate("Offline / Error");
-        timeoutId = setTimeout(pollCommandState, 5000); 
+        timeoutId = setTimeout(pollCommandState, 30000); // Back off to 30s on failure
       }
     };
     
