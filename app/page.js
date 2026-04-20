@@ -121,7 +121,7 @@ export default function Home() {
         let nextPingDelay = 10000; // Default: 10 seconds if idle
         
         if (jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching') {
-          nextPingDelay = 3000; // Fast: 3 seconds if actively crunching numbers
+          nextPingDelay = 5000; // Fast: 5 seconds if actively crunching numbers
         } else if (jsonCmd?.engine_status === 'offline') {
           nextPingDelay = 30000; // Slow: 30 seconds if the desktop app is closed
         }
