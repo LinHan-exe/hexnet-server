@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 
-// --- NEW: Safe SVG Equity Curve Renderer ---
+// --- Safe SVG Equity Curve Renderer ---
 const Sparkline = ({ data, color }) => {
   let parsedData = [];
   
@@ -52,6 +52,7 @@ export default function Home() {
     active_strats: [], 
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0, sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
+    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, // Custom Fitness Weights
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
     trade_progress: { current: 0, total: 0 },
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
@@ -76,12 +77,11 @@ export default function Home() {
 
     fetchTableData();
 
-    // 2. Highly Optimized Adaptive Status Poller
+    // Highly Optimized Adaptive Status Poller
     const pollCommandState = async () => {
-      // ANTI-ZOMBIE MEASURE: If the user switches tabs or minimizes the window, 
-      // do not ping Vercel. Save API requests!
+      // ANTI-ZOMBIE MEASURE: Stop polling if tab is hidden
       if (document.hidden) {
-        timeoutId = setTimeout(pollCommandState, 5000); // Check if tab is visible again in 5s
+        timeoutId = setTimeout(pollCommandState, 5000); 
         return; 
       }
 
@@ -107,7 +107,6 @@ export default function Home() {
             };
           });
 
-          // Smart Data Reloading
           const justFinished = previousStatus.current === 'running' && jsonCmd.engine_status === 'idle';
           const justSynced = previousStatus.current === 'sync_requested' && jsonCmd.status === 'idle';
           
@@ -117,20 +116,20 @@ export default function Home() {
         }
         setLastUpdate(new Date().toLocaleTimeString());
 
-        // ADAPTIVE POLLING SPEED (Protects Vercel API Limits)
-        let nextPingDelay = 15000; // Default: 15 seconds if idle
+        // ADAPTIVE POLLING SPEED
+        let nextPingDelay = 10000; // Default: 10s if idle
         
         if (jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching') {
-          nextPingDelay = 5000; // Fast: 5 seconds if actively crunching numbers
+          nextPingDelay = 3000; // Fast: 3s if active
         } else if (jsonCmd?.engine_status === 'offline') {
-          nextPingDelay = 30000; // Slow: 30 seconds if the desktop app is closed
+          nextPingDelay = 30000; // Slow: 30s if desktop app closed
         }
         
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
       } catch (err) { 
         setLastUpdate("Offline / Error");
-        timeoutId = setTimeout(pollCommandState, 30000); // Back off to 30s on failure
+        timeoutId = setTimeout(pollCommandState, 30000); 
       }
     };
     
@@ -157,13 +156,11 @@ export default function Home() {
   };
 
   const startBacktest = () => {
-    // Optimistic UI Update
     setCmd(prev => ({ 
       ...prev, 
       engine_status: 'running', 
       stage_text: 'Calculating Strategy Data...' 
     }));
-    
     sendCommand({ status: 'backtest_requested', mode: 'Backtest Specific Strategies', active_strats: cmd.active_strats });
   };
 
@@ -355,6 +352,7 @@ export default function Home() {
                   <option>Expected Value (EV)</option>
                   <option>Strategy Alpha</option>
                   <option>Net PnL</option>
+                  <option>Custom Score</option>
                 </select>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: 'auto' }}>
@@ -385,6 +383,37 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {/* DYNAMIC CUSTOM SCORE WEIGHTS UI */}
+              {cmd.sort === 'Custom Score' && (
+                <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '15px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #00bcd4', width: '100%', marginTop: '15px', marginBottom: '10px' }}>
+                  <div style={{ width: '100%', fontSize: '13px', color: '#00bcd4', fontWeight: 'bold', marginBottom: '-5px' }}>CUSTOM FITNESS WEIGHTS (0.0 to 1.0)</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>WFE</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_wfe} onChange={(e) => sendCommand({ cw_wfe: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>WIN RATE</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_wr} onChange={(e) => sendCommand({ cw_wr: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>NET PNL</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_pnl} onChange={(e) => sendCommand({ cw_pnl: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>EXP VALUE</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_ev} onChange={(e) => sendCommand({ cw_ev: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>SHARPE</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_sharpe} onChange={(e) => sendCommand({ cw_sharpe: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>ALPHA</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_alpha} onChange={(e) => sendCommand({ cw_alpha: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 {cmd.mode === 'Generate Advanced Optimal Strategy' ? (
@@ -503,7 +532,7 @@ export default function Home() {
           </>
         )}
 
-        {/* Data Table (Dynamically Swaps based on Backtest vs Optimization) */}
+        {/* Data Table */}
         {data.length === 0 ? ( 
           <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#131722', borderRadius: '8px', border: '1px solid #2b2b36' }}> 
             <h3 style={{ color: '#787b86' }}>Waiting for Python Engine...</h3> 
@@ -531,7 +560,6 @@ export default function Home() {
                       {row.Name ? row.Name : `#${i + 1}`}
                     </td> 
                     
-                    {/* Render the PnL Graph if this is a Live Backtest */}
                     {data[0]?.ChartData !== undefined && (
                       <td style={{ padding: '5px 20px', verticalAlign: 'middle' }}>
                         <Sparkline data={row.ChartData} color={row.PnL >= 0 ? '#26a69a' : '#ef5350'} />
@@ -545,7 +573,6 @@ export default function Home() {
                     <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ab47bc' }}>{row.EV?.toFixed(2)}</td> 
                     <td style={{ padding: '15px 20px', color: row.Alpha >= 0 ? '#ffb74d' : '#ef5350', fontWeight: 'bold' }}>{row.Alpha?.toFixed(2)}</td> 
                     
-                    {/* Render PF if Backtest, WFE if Generator */}
                     <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>
                       {data[0]?.PF !== undefined 
                         ? (row.PF !== undefined ? row.PF.toFixed(2) : 'N/A') 
