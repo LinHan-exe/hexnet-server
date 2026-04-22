@@ -32,6 +32,7 @@ const DEFAULT_STATE = {
   adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.5, tp_max: 5.0,
   sl_min: 0.5, sl_max: 5.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0,
   min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
+  cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0,
   use_genetic: false, progress: 0, total_sims: 1000, trade_progress: { current: 0, total: 0 },
   eta: '--:--:--', sims_sec: 0, data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A',
   fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '',
