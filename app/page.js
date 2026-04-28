@@ -50,10 +50,10 @@ export default function Home() {
   const [cmd, setCmd] = useState({
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [],
     active_strats: [], 
-    // LIFTED THE LIMITS BELOW (0.1 to 100.0)
-    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.1, tp_max: 100.0, sl_min: 0.1, sl_max: 100.0, logic_max: 2, ideal_tpd: 3.0, ideal_ev: 10.0, 
+    adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.1, tp_max: 100.0, sl_min: 0.1, sl_max: 100.0, logic_max: 2, 
+    ideal_tpd: 3.0, ideal_ev: 10.0, ideal_mdd: 10.0, max_mdd: 50.0, // <-- ADDED MDD
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
-    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, // Custom Fitness Weights
+    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, cw_mdd: 1.0, // <-- ADDED cw_mdd
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
     trade_progress: { current: 0, total: 0 },
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
