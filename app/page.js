@@ -52,6 +52,7 @@ export default function Home() {
     active_strats: [], 
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.1, tp_max: 100.0, sl_min: 0.1, sl_max: 100.0, logic_max: 2, 
     ideal_tpd: 3.0, ideal_ev: 10.0, ideal_mdd: 10.0, max_mdd: 50.0, // <-- ADDED MDD
+    ideal_ml: 1.0, max_ml: 5.0, ideal_wr: 60.0, // <--- NEW
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
     cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, cw_mdd: 1.0, // <-- ADDED cw_mdd
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
