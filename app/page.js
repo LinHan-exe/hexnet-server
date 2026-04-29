@@ -51,10 +51,10 @@ export default function Home() {
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [],
     active_strats: [], 
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.1, tp_max: 100.0, sl_min: 0.1, sl_max: 100.0, logic_max: 2, 
-    ideal_tpd: 3.0, ideal_ev: 10.0, ideal_mdd: 10.0, max_mdd: 50.0, 
-    ideal_ml: 1.0, max_ml: 5.0, ideal_wr: 60.0, 
+    ideal_tpd: 3.0, ideal_ev: 10.0, ideal_mdd: 10.0, max_mdd: 50.0, // <-- ADDED MDD
+    ideal_ml: 1.0, max_ml: 5.0, ideal_wr: 60.0, // <--- NEW
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
-    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, cw_mdd: 1.0, cw_ml: 1.0, 
+    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, cw_mdd: 1.0, cw_ml: 1.0, // <-- ADDED cw_mdd & cw_ml
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
     trade_progress: { current: 0, total: 0 },
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
@@ -103,13 +103,13 @@ export default function Home() {
               trade_progress: jsonCmd.trade_progress || prev.trade_progress,
               available_strats: jsonCmd.available_strats || prev.available_strats,
               active_strats: jsonCmd.active_strats || prev.active_strats,
-              // Sync the variables
+              // Sync the new MDD & ML variables!
               ideal_mdd: jsonCmd.ideal_mdd !== undefined ? jsonCmd.ideal_mdd : prev.ideal_mdd,
               max_mdd: jsonCmd.max_mdd !== undefined ? jsonCmd.max_mdd : prev.max_mdd,
-              cw_mdd: jsonCmd.cw_mdd !== undefined ? jsonCmd.cw_mdd : prev.cw_mdd,
               ideal_ml: jsonCmd.ideal_ml !== undefined ? jsonCmd.ideal_ml : prev.ideal_ml,
               max_ml: jsonCmd.max_ml !== undefined ? jsonCmd.max_ml : prev.max_ml,
               ideal_wr: jsonCmd.ideal_wr !== undefined ? jsonCmd.ideal_wr : prev.ideal_wr,
+              cw_mdd: jsonCmd.cw_mdd !== undefined ? jsonCmd.cw_mdd : prev.cw_mdd,
               cw_ml: jsonCmd.cw_ml !== undefined ? jsonCmd.cw_ml : prev.cw_ml
             };
           });
@@ -438,7 +438,7 @@ export default function Home() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>MED. LOSS (INV)</label>
-                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_ml} onChange={(e) => sendCommand({ cw_ml: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Median Loss (Inverted)"/>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_ml} onChange={(e) => sendCommand({ cw_ml: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Median Loss (Inverted: Higher score rewards smaller losses)"/>
                   </div>
                 </div>
               )}
@@ -503,83 +503,75 @@ export default function Home() {
                 )}
 
                 {cmd.adv_enabled && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', padding: '15px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #ffb74d', flex: 1, minWidth: '400px' }}>
-                    
+                  <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '15px', backgroundColor: '#131722', borderRadius: '6px', border: '1px solid #ffb74d', flex: 1, minWidth: '400px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>SMA MIN/MAX</label>
                       <div style={{ display: 'flex', gap: '5px' }}>
-                        <input type="number" value={cmd.sma_min} onChange={(e) => sendCommand({ sma_min: parseInt(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
-                        <input type="number" value={cmd.sma_max} onChange={(e) => sendCommand({ sma_max: parseInt(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                        <input type="number" value={cmd.sma_min} onChange={(e) => sendCommand({ sma_min: parseInt(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                        <input type="number" value={cmd.sma_max} onChange={(e) => sendCommand({ sma_max: parseInt(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>MAX GATES</label>
-                      <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>TP MIN/MAX</label>
                       <div style={{ display: 'flex', gap: '5px' }}>
-                        <input type="number" step="0.1" value={cmd.tp_min} onChange={(e) => sendCommand({ tp_min: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
-                        <input type="number" step="0.1" value={cmd.tp_max} onChange={(e) => sendCommand({ tp_max: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                        <input type="number" step="0.1" value={cmd.tp_min} onChange={(e) => sendCommand({ tp_min: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                        <input type="number" step="0.1" value={cmd.tp_max} onChange={(e) => sendCommand({ tp_max: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>SL MIN/MAX</label>
                       <div style={{ display: 'flex', gap: '5px' }}>
-                        <input type="number" step="0.1" value={cmd.sl_min} onChange={(e) => sendCommand({ sl_min: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
-                        <input type="number" step="0.1" value={cmd.sl_max} onChange={(e) => sendCommand({ sl_max: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                        <input type="number" step="0.1" value={cmd.sl_min} onChange={(e) => sendCommand({ sl_min: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
+                        <input type="number" step="0.1" value={cmd.sl_max} onChange={(e) => sendCommand({ sl_max: parseFloat(e.target.value) })} style={{ width: '60px', ...inputStyle }} />
                       </div>
                     </div>
-
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>MAX GATES</label>
+                      <input type="number" value={cmd.logic_max} onChange={(e) => sendCommand({ logic_max: parseInt(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL TPD</label>
-                      <input type="number" step="0.5" value={cmd.ideal_tpd} onChange={(e) => sendCommand({ ideal_tpd: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <input type="number" step="0.5" value={cmd.ideal_tpd} onChange={(e) => sendCommand({ ideal_tpd: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV (Pts)</label>
-                      <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL MDD (Pts)</label>
-                      <input type="number" step="1.0" value={cmd.ideal_mdd} onChange={(e) => sendCommand({ ideal_mdd: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} title="Target Median Drawdown per trade" />
+                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL EV (PTS)</label>
+                      <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX MDD (Pts)</label>
-                      <input type="number" step="1.0" value={cmd.max_mdd} onChange={(e) => sendCommand({ max_mdd: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} title="Absolute Limit: Any strategy exceeding this median drawdown is instantly killed" />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL MED. LOSS (Pts)</label>
-                      <input type="number" step="0.1" value={cmd.ideal_ml} onChange={(e) => sendCommand({ ideal_ml: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL MDD (PTS)</label>
+                      <input type="number" step="1.0" value={cmd.ideal_mdd} onChange={(e) => sendCommand({ ideal_mdd: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Median Drawdown per trade" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX MED. LOSS (Pts)</label>
-                      <input type="number" step="0.1" value={cmd.max_ml} onChange={(e) => sendCommand({ max_ml: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX MDD (PTS)</label>
+                      <input type="number" step="1.0" value={cmd.max_mdd} onChange={(e) => sendCommand({ max_mdd: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Absolute Limit: Any strategy exceeding this median drawdown is instantly killed" />
                     </div>
-
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL MED. LOSS</label>
+                      <input type="number" step="0.1" value={cmd.ideal_ml} onChange={(e) => sendCommand({ ideal_ml: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Median Loss per losing trade" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX MED. LOSS</label>
+                      <input type="number" step="0.1" value={cmd.max_ml} onChange={(e) => sendCommand({ max_ml: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Absolute Limit for Median Loss" />
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL WINRATE %</label>
-                      <input type="number" step="1.0" value={cmd.ideal_wr} onChange={(e) => sendCommand({ ideal_wr: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <input type="number" step="1.0" value={cmd.ideal_wr} onChange={(e) => sendCommand({ ideal_wr: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Win Rate percentage" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN WFE %</label>
+                      <input type="number" step="1.0" value={cmd.min_wfe} onChange={(e) => sendCommand({ min_wfe: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN WR %</label>
-                      <input type="number" step="1.0" value={cmd.min_wr} onChange={(e) => sendCommand({ min_wr: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <input type="number" step="1.0" value={cmd.min_wr} onChange={(e) => sendCommand({ min_wr: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
                     </div>
-
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN WFE %</label>
-                      <input type="number" step="1.0" value={cmd.min_wfe} onChange={(e) => sendCommand({ min_wfe: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN NET PNL</label>
+                      <input type="number" step="1.0" value={cmd.min_pnl} onChange={(e) => sendCommand({ min_pnl: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN SHARPE</label>
-                      <input type="number" step="0.1" value={cmd.min_sharpe} onChange={(e) => sendCommand({ min_sharpe: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: 'span 2' }}>
-                      <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN NET PNL</label>
-                      <input type="number" step="1.0" value={cmd.min_pnl} onChange={(e) => sendCommand({ min_pnl: parseFloat(e.target.value) })} style={{ width: '100%', ...inputStyle }} />
+                      <input type="number" step="0.1" value={cmd.min_sharpe} onChange={(e) => sendCommand({ min_sharpe: parseFloat(e.target.value) })} style={{ width: '80px', ...inputStyle }} />
                     </div>
                   </div>
                 )}
@@ -606,6 +598,7 @@ export default function Home() {
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Net PnL</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Exp. Value</th> 
                   <th style={{ padding: '15px 20px', color: '#ffb74d' }}>Alpha</th> 
+                  {/* --- NEW HEADER COLUMN --- */}
                   <th style={{ padding: '15px 20px', color: '#ffb74d' }}>{data[0]?.PF !== undefined ? 'PF' : 'MDD (Pts)'}</th> 
                   <th style={{ padding: '15px 20px', color: '#ab47bc' }}>{data[0]?.PF !== undefined ? '' : 'WFE %'}</th> 
                 </tr> 
@@ -630,12 +623,14 @@ export default function Home() {
                     <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ab47bc' }}>{row.EV?.toFixed(2)}</td> 
                     <td style={{ padding: '15px 20px', color: row.Alpha >= 0 ? '#ffb74d' : '#ef5350', fontWeight: 'bold' }}>{row.Alpha?.toFixed(2)}</td> 
                     
+                    {/* --- NEW MDD / PF DATA CELL --- */}
                     <td style={{ padding: '15px 20px', color: '#ffb74d', fontWeight: 'bold' }}>
                       {data[0]?.PF !== undefined 
                         ? (row.PF !== undefined ? row.PF.toFixed(2) : 'N/A') 
                         : (row.MedianDD !== undefined ? `${row.MedianDD.toFixed(2)}` : 'N/A')}
                     </td> 
 
+                    {/* --- ISOLATED WFE DATA CELL --- */}
                     <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>
                       {data[0]?.PF !== undefined 
                         ? '' 
