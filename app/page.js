@@ -5,7 +5,6 @@ import { useEffect, useState, useRef } from 'react';
 const Sparkline = ({ data, color }) => {
   let parsedData = [];
   
-  // Safely convert CSV stringified arrays back into real JavaScript arrays
   try {
     parsedData = typeof data === 'string' ? JSON.parse(data) : data;
   } catch (e) {
@@ -51,10 +50,10 @@ export default function Home() {
     status: 'idle', engine_status: 'offline', mode: 'Generate Random Strategies', strategy: '', sims: 1000, sort: 'Composite Score (Best Overall)', auto: true, auto_max: 10, available_strats: [],
     active_strats: [], 
     adv_enabled: false, sma_min: 10, sma_max: 200, tp_min: 0.1, tp_max: 100.0, sl_min: 0.1, sl_max: 100.0, logic_max: 2, 
-    ideal_tpd: 3.0, ideal_ev: 10.0, ideal_mdd: 10.0, max_mdd: 50.0, // <-- ADDED MDD
-    ideal_ml: 1.0, max_ml: 5.0, ideal_wr: 60.0, // <--- NEW
+    ideal_tpd: 3.0, ideal_ev: 10.0, ideal_add: 10.0, max_add: 50.0, 
+    ideal_al: 1.0, max_al: 5.0, ideal_wr: 60.0, ideal_tpd_ret: 80.0, 
     min_wfe: 50.0, min_wr: 40.0, min_pnl: 0.0, min_sharpe: 1.0,
-    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, cw_mdd: 1.0, cw_ml: 1.0, // <-- ADDED cw_mdd & cw_ml
+    cw_wfe: 1.0, cw_wr: 1.0, cw_pnl: 1.0, cw_ev: 1.0, cw_sharpe: 1.0, cw_alpha: 1.0, cw_add: 1.0, cw_al: 1.0, cw_tpd_ret: 1.0, 
     use_genetic: false, progress: 0, total_sims: 1000, eta: '--:--:--', sims_sec: 0,
     trade_progress: { current: 0, total: 0 },
     data_ticker: 'NONE', data_start: 'N/A', data_end: 'N/A', fetch_ticker: 'SPY', fetch_interval: '1m', fetch_start: '', fetch_end: '', fetch_rth: true, fetch_pct: 0,
@@ -81,7 +80,6 @@ export default function Home() {
 
     // Highly Optimized Adaptive Status Poller
     const pollCommandState = async () => {
-      // DEEP SLEEP: Stop polling entirely if tab is hidden
       if (document.hidden) return; 
 
       try {
@@ -103,14 +101,16 @@ export default function Home() {
               trade_progress: jsonCmd.trade_progress || prev.trade_progress,
               available_strats: jsonCmd.available_strats || prev.available_strats,
               active_strats: jsonCmd.active_strats || prev.active_strats,
-              // Sync the new MDD & ML variables!
-              ideal_mdd: jsonCmd.ideal_mdd !== undefined ? jsonCmd.ideal_mdd : prev.ideal_mdd,
-              max_mdd: jsonCmd.max_mdd !== undefined ? jsonCmd.max_mdd : prev.max_mdd,
-              ideal_ml: jsonCmd.ideal_ml !== undefined ? jsonCmd.ideal_ml : prev.ideal_ml,
-              max_ml: jsonCmd.max_ml !== undefined ? jsonCmd.max_ml : prev.max_ml,
+              
+              ideal_add: jsonCmd.ideal_add !== undefined ? jsonCmd.ideal_add : prev.ideal_add,
+              max_add: jsonCmd.max_add !== undefined ? jsonCmd.max_add : prev.max_add,
+              ideal_al: jsonCmd.ideal_al !== undefined ? jsonCmd.ideal_al : prev.ideal_al,
+              max_al: jsonCmd.max_al !== undefined ? jsonCmd.max_al : prev.max_al,
               ideal_wr: jsonCmd.ideal_wr !== undefined ? jsonCmd.ideal_wr : prev.ideal_wr,
-              cw_mdd: jsonCmd.cw_mdd !== undefined ? jsonCmd.cw_mdd : prev.cw_mdd,
-              cw_ml: jsonCmd.cw_ml !== undefined ? jsonCmd.cw_ml : prev.cw_ml
+              ideal_tpd_ret: jsonCmd.ideal_tpd_ret !== undefined ? jsonCmd.ideal_tpd_ret : prev.ideal_tpd_ret,
+              cw_add: jsonCmd.cw_add !== undefined ? jsonCmd.cw_add : prev.cw_add,
+              cw_al: jsonCmd.cw_al !== undefined ? jsonCmd.cw_al : prev.cw_al,
+              cw_tpd_ret: jsonCmd.cw_tpd_ret !== undefined ? jsonCmd.cw_tpd_ret : prev.cw_tpd_ret
             };
           });
 
@@ -123,26 +123,24 @@ export default function Home() {
         }
         setLastUpdate(new Date().toLocaleTimeString());
 
-        // ADAPTIVE POLLING SPEED (Protects Vercel API Limits)
-        let nextPingDelay = 15000; // Default: 15 seconds if idle
+        let nextPingDelay = 15000; 
         
         if (jsonCmd?.engine_status === 'running' || jsonCmd?.engine_status === 'fetching') {
-          nextPingDelay = 3000; // Fast: 3 seconds if actively crunching numbers
+          nextPingDelay = 3000; 
         } else if (jsonCmd?.engine_status === 'offline') {
-          nextPingDelay = 60000; // Deep Sleep: 60 seconds if the desktop app is closed
+          nextPingDelay = 60000; 
         }
         
         timeoutId = setTimeout(pollCommandState, nextPingDelay);
 
       } catch (err) { 
         setLastUpdate("Offline / Error");
-        timeoutId = setTimeout(pollCommandState, 30000); // Back off to 30s on failure
+        timeoutId = setTimeout(pollCommandState, 30000); 
       }
     };
     
     pollCommandState();
 
-    // WAKE UP INSTANTLY: When user returns to the tab, immediately check state
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         clearTimeout(timeoutId);
@@ -207,7 +205,6 @@ export default function Home() {
               <span style={{ color: '#787b86', fontWeight: 'normal', marginLeft: '10px' }}>(Sync: {lastUpdate})</span>
             </p>
             
-            {/* OPTIMIZER PROGRESS BAR */}
             {cmd.engine_status === 'running' && !cmd.stage_text?.includes('Calculating') && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
@@ -227,7 +224,6 @@ export default function Home() {
               </div>
             )}
             
-            {/* LIVE BACKTEST INDICATOR */}
             {cmd.engine_status === 'running' && cmd.stage_text?.includes('Calculating') && (
               <div style={{ marginTop: '20px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #4CAF50' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold' }}>
@@ -239,7 +235,6 @@ export default function Home() {
               </div>
             )}
             
-            {/* Trade Simulation Engine Sync Progress */}
             {cmd.stage_text?.includes("Simulating Trades") && cmd.trade_progress?.total > 0 && (
               <div style={{ marginTop: '15px', width: '100%', maxWidth: '550px', backgroundColor: '#1e1e24', padding: '16px', borderRadius: '8px', border: '1px solid #2962ff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
@@ -433,12 +428,16 @@ export default function Home() {
                     <input type="number" step="0.1" min="0" max="1" value={cmd.cw_alpha} onChange={(e) => sendCommand({ cw_alpha: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>MDD (INV)</label>
-                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_mdd} onChange={(e) => sendCommand({ cw_mdd: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Median Drawdown (Inverted: Higher score rewards smaller drawdowns)"/>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>ADD (INV)</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_add} onChange={(e) => sendCommand({ cw_add: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Average Drawdown"/>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>MED. LOSS (INV)</label>
-                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_ml} onChange={(e) => sendCommand({ cw_ml: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Median Loss (Inverted: Higher score rewards smaller losses)"/>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>AVG. LOSS (INV)</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_al} onChange={(e) => sendCommand({ cw_al: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Average Loss"/>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', color: '#787b86', fontWeight: 'bold' }}>TPD RET</label>
+                    <input type="number" step="0.1" min="0" max="1" value={cmd.cw_tpd_ret} onChange={(e) => sendCommand({ cw_tpd_ret: parseFloat(e.target.value) })} style={{ width: '65px', ...inputStyle }} title="Weight for Trades Per Day Retention" />
                   </div>
                 </div>
               )}
@@ -538,24 +537,28 @@ export default function Home() {
                       <input type="number" step="1.0" value={cmd.ideal_ev} onChange={(e) => sendCommand({ ideal_ev: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL MDD (PTS)</label>
-                      <input type="number" step="1.0" value={cmd.ideal_mdd} onChange={(e) => sendCommand({ ideal_mdd: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Median Drawdown per trade" />
+                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL ADD (PTS)</label>
+                      <input type="number" step="1.0" value={cmd.ideal_add} onChange={(e) => sendCommand({ ideal_add: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Average Drawdown per trade" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX MDD (PTS)</label>
-                      <input type="number" step="1.0" value={cmd.max_mdd} onChange={(e) => sendCommand({ max_mdd: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Absolute Limit: Any strategy exceeding this median drawdown is instantly killed" />
+                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX ADD (PTS)</label>
+                      <input type="number" step="1.0" value={cmd.max_add} onChange={(e) => sendCommand({ max_add: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Absolute Limit: Any strategy exceeding this average drawdown is instantly killed" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL MED. LOSS</label>
-                      <input type="number" step="0.1" value={cmd.ideal_ml} onChange={(e) => sendCommand({ ideal_ml: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Median Loss per losing trade" />
+                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL AVG. LOSS</label>
+                      <input type="number" step="0.1" value={cmd.ideal_al} onChange={(e) => sendCommand({ ideal_al: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Average Loss per losing trade" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX MED. LOSS</label>
-                      <input type="number" step="0.1" value={cmd.max_ml} onChange={(e) => sendCommand({ max_ml: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Absolute Limit for Median Loss" />
+                      <label style={{ fontSize: '11px', color: '#ef5350', fontWeight: 'bold' }}>MAX AVG. LOSS</label>
+                      <input type="number" step="0.1" value={cmd.max_al} onChange={(e) => sendCommand({ max_al: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Absolute Limit for Average Loss" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL WINRATE %</label>
                       <input type="number" step="1.0" value={cmd.ideal_wr} onChange={(e) => sendCommand({ ideal_wr: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target Win Rate percentage" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '11px', color: '#ab47bc', fontWeight: 'bold' }}>IDEAL TPD RET %</label>
+                      <input type="number" step="1.0" value={cmd.ideal_tpd_ret} onChange={(e) => sendCommand({ ideal_tpd_ret: parseFloat(e.target.value) })} style={{ width: '75px', ...inputStyle }} title="Target TPD Retention percentage" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', color: '#ffb74d', fontWeight: 'bold' }}>MIN WFE %</label>
@@ -598,8 +601,9 @@ export default function Home() {
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Net PnL</th> 
                   <th style={{ padding: '15px 20px', color: '#787b86' }}>Exp. Value</th> 
                   <th style={{ padding: '15px 20px', color: '#ffb74d' }}>Alpha</th> 
-                  {/* --- NEW HEADER COLUMN --- */}
-                  <th style={{ padding: '15px 20px', color: '#ffb74d' }}>{data[0]?.PF !== undefined ? 'PF' : 'MDD (Pts)'}</th> 
+                  {/* --- NEW HEADER COLUMNS --- */}
+                  <th style={{ padding: '15px 20px', color: '#ffb74d' }}>{data[0]?.PF !== undefined ? 'PF' : 'ADD (Pts)'}</th> 
+                  <th style={{ padding: '15px 20px', color: '#ab47bc' }}>{data[0]?.PF !== undefined ? '' : 'TPD Ret %'}</th> 
                   <th style={{ padding: '15px 20px', color: '#ab47bc' }}>{data[0]?.PF !== undefined ? '' : 'WFE %'}</th> 
                 </tr> 
               </thead> 
@@ -623,12 +627,19 @@ export default function Home() {
                     <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#ab47bc' }}>{row.EV?.toFixed(2)}</td> 
                     <td style={{ padding: '15px 20px', color: row.Alpha >= 0 ? '#ffb74d' : '#ef5350', fontWeight: 'bold' }}>{row.Alpha?.toFixed(2)}</td> 
                     
-                    {/* --- NEW MDD / PF DATA CELL --- */}
+                    {/* --- NEW ADD / PF DATA CELL --- */}
                     <td style={{ padding: '15px 20px', color: '#ffb74d', fontWeight: 'bold' }}>
                       {data[0]?.PF !== undefined 
                         ? (row.PF !== undefined ? row.PF.toFixed(2) : 'N/A') 
-                        : (row.MedianDD !== undefined ? `${row.MedianDD.toFixed(2)}` : 'N/A')}
+                        : (row.AverageDD !== undefined ? `${row.AverageDD.toFixed(2)}` : 'N/A')}
                     </td> 
+
+                    {/* --- NEW TPD RETENTION CELL --- */}
+                    <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>
+                      {data[0]?.PF !== undefined 
+                        ? '' 
+                        : (row.TPD_Ret !== undefined ? `${row.TPD_Ret.toFixed(1)}%` : 'N/A')}
+                    </td>
 
                     {/* --- ISOLATED WFE DATA CELL --- */}
                     <td style={{ padding: '15px 20px', color: '#ab47bc', fontWeight: 'bold' }}>
